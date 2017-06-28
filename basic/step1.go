@@ -63,9 +63,8 @@ func (t *SimpleChaincode) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
 		return t.findAll(stub)
 	} else if function == "addUser" {
 		return t.addUser(stub, args)
-	} else if function == "newQuery" {
-		// the old "Query" is now implemtned in invoke
-		return t.newQuery(stub, args)
+	} else if function == "queryUser" {
+		return t.queryUser(stub, args)
 	} else if function == "addNewActivePollToUser" {
 		return t.addNewActivePollToUser(stub, args)
 	} else if function == "ActiveToInactivePoll" {
@@ -165,7 +164,7 @@ func (t *SimpleChaincode) addUser(stub shim.ChaincodeStubInterface, args []strin
 }
 
 //peer chaincode query -C mychannel -n mycc -c '{"Args":["newQuery","c"]}'
-func (t *SimpleChaincode) newQuery(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+func (t *SimpleChaincode) queryUser(stub shim.ChaincodeStubInterface, args []string) pb.Response {
 
     var key string // Entities
 
@@ -280,7 +279,7 @@ func (t *SimpleChaincode) addNewActivePollToUser(stub shim.ChaincodeStubInterfac
 	return shim.Success(nil)
 }
 
-//peer chaincode invoke -o orderer.example.com:7050 -C mychannel -n mycc -c '{"Args":["ActiveToInactivePoll","c","my new poll"]}'
+//peer chaincode invoke -o orderer.example.com:7050 -C mychannel -n mycc -c '{"Args":["ActiveToInactivePoll","c","my new poll1"]}'
 func (t *SimpleChaincode) ActiveToInactivePoll(stub shim.ChaincodeStubInterface, args []string) pb.Response {
 	var user User 
 	var userAsJsonByteArray []byte
