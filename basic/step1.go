@@ -163,7 +163,7 @@ func (t *SimpleChaincode) addUser(stub shim.ChaincodeStubInterface, args []strin
 	return shim.Success(nil)
 }
 
-//peer chaincode query -C mychannel -n mycc -c '{"Args":["newQuery","c"]}'
+//peer chaincode query -C mychannel -n mycc -c '{"Args":["queryUser","c"]}'
 func (t *SimpleChaincode) queryUser(stub shim.ChaincodeStubInterface, args []string) pb.Response {
 
     var key string // Entities
@@ -251,7 +251,7 @@ func (t *SimpleChaincode) addNewActivePollToUser(stub shim.ChaincodeStubInterfac
 
     }
 
-    pollToAdd,err = createPoll(args[1])
+    pollToAdd,err = createActivePoll(args[1])
 
     if err != nil{
 
@@ -535,7 +535,7 @@ func createUser() (User, error){
     return User{Active: emptyActive, Inactive: emptyInactive}, err
 }
 
-func createPoll(pollName string) (ActivePoll, error){
+func createActivePoll(pollName string) (ActivePoll, error){
 	tok := 1
 	var err error
 
