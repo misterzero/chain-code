@@ -42,7 +42,7 @@ type ActivePoll struct{
 	Token		int 				`json:"token"`
 }
 
-type Poll struct{
+type Option struct{
 	Name 		string 				`json:"name"`
 	Count 		int 				`json:"count"`
 }
@@ -53,7 +53,7 @@ type User struct{
 }
 
 type Poll struct{
-	Option 		[]Poll 				`json:"option"`
+	Options 		[]Option 				`json:"options"`
 }
 
 func (t *SimpleChaincode) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
@@ -78,6 +78,8 @@ func (t *SimpleChaincode) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
 		return t.addNewActivePollToUser(stub, args)
 	} else if function == "ActiveToInactivePoll" {
 		return t.ActiveToInactivePoll(stub, args)
+	} else if function == "addNewPoll" {
+		return t.addNewPoll(stub, args)
 	}
 
 	return shim.Error("Invalid invoke function name. Expecting \"move\" \"delete\" \"query\" \"findAll\"")
@@ -173,6 +175,7 @@ func (t *SimpleChaincode) addUser(stub shim.ChaincodeStubInterface, args []strin
 }
 
 //peer chaincode query -C mychannel -n mycc -c '{"Args":["queryUser","c"]}'
+//peer chaincode query -C mychannel -n mycc -c '{"Args":["queryUser","my_poll0"]}'
 func (t *SimpleChaincode) queryUser(stub shim.ChaincodeStubInterface, args []string) pb.Response {
 
     var key string // Entities
@@ -365,6 +368,50 @@ func (t *SimpleChaincode) ActiveToInactivePoll(stub shim.ChaincodeStubInterface,
 	return shim.Success(nil)
 }
 
+//peer chaincode invoke -o orderer.example.com:7050 -C mychannel -n mycc -c '{"Args":["addNewPoll","my_poll0","{\"Options\":[{\"Name\":\"opt1\",\"Count\":0},{\"Name\":\"opt2\",\"Count\":0}]}"]}'
+func (t *SimpleChaincode) addNewPoll(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+	var poll Poll
+	var pollAsJsonByteArray []byte
+    var pollAsJsonString string
+	var pollExists bool
+	var err error
+
+	if len(args) < 2 {
+		return shim.Error("put operation must include one arguments, a key")
+	}
+
+	key := args[0]
+	s := args[1]
+
+	poll, err = createNewPoll(s)
+	if err != nil {
+		return shim.Error("Expecting integer value for asset holding")
+	}
+
+	pollAsJsonByteArray, err = getPollAsJsonByteArray(poll)
+    if err != nil{
+        return shim.Error(err.Error())
+    }
+
+    pollAsJsonString = string(pollAsJsonByteArray)
+    pollExists, err = isExistingPoll(stub, key)
+    if err != nil {
+        return shim.Error(err.Error())
+    }
+    if pollExists {
+        return shim.Error("An asset already exists with id:" + key)
+    }
+	
+
+	err = stub.PutState(key, []byte(pollAsJsonString))
+	if err != nil {
+		return shim.Error(err.Error())
+	}
+	fmt.Println("######################## New poll ! ##################################")
+	
+	return shim.Success(nil)
+}
+
 // Transaction makes payment of X units from A to B
 func (t *SimpleChaincode) move(stub shim.ChaincodeStubInterface, args []string) pb.Response {
 	var A, B string    // Entities
@@ -551,6 +598,15 @@ func createActivePoll(pollName string) (ActivePoll, error){
     return ActivePoll{Name: pollName, Token: tok}, err
 }
 
+func createNewPoll(s string) (Poll, error){
+	var poll Poll
+	var err error
+	err = json.Unmarshal([]byte(s), &poll)
+
+	return poll,err
+
+}
+
 func isExistingUser(stub shim.ChaincodeStubInterface, key string) (bool, error){
 
     var err error
@@ -560,6 +616,23 @@ func isExistingUser(stub shim.ChaincodeStubInterface, key string) (bool, error){
     userAsBytes, err := stub.GetState(key)
 
     if(len(userAsBytes) != 0){
+
+        result = true
+
+    }
+
+    return result, err
+}
+
+func isExistingPoll(stub shim.ChaincodeStubInterface, key string) (bool, error){
+
+    var err error
+
+    result := false
+
+    pollAsBytes, err := stub.GetState(key)
+
+    if(len(pollAsBytes) != 0){
 
         result = true
 
@@ -601,5 +674,23 @@ func getUserFromJsonByteArray(userAsJsonByte []byte) (User, error) {
     }
 
     return user, err
+
+}
+
+func getPollAsJsonByteArray(poll Poll) ([]byte, error){
+
+    var jsonPoll []byte
+
+    var err error
+
+    jsonPoll, err = json.Marshal(poll)
+
+    if err != nil{
+
+        errors.New("Unable to convert asset to json string")
+
+    }
+
+    return jsonPoll, err
 
 }
