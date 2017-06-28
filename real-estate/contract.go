@@ -24,9 +24,11 @@ package main
 import (
 	"fmt"
 	"strconv"
+	"errors"
+	"time"
+	"encoding/json"
 	"github.com/hyperledger/fabric/core/chaincode/shim"
 	pb "github.com/hyperledger/fabric/protos/peer"
-	"time"
 )
 
 // SimpleChaincode example simple Chaincode implementation
@@ -272,7 +274,76 @@ func getFullByteArray(id string, byteArray []byte) ([]byte, error){
 }
 
 //====================================================================================================================
+func createAttributeFromArgs(args []string) (*Attribute, error){
 
+	var attribute Attribute
+	var id int64
+	var percentage float64
+	var err error
+
+	if len(args) != 2 {
+		err = errors.New("expected args length of 2, but received " + string(len(args)))
+	}
+
+	id, err = strconv.ParseInt(args[0], 10, 64)
+	if err != nil {
+		err = errors.New("unable to parse " + string(args[0]) + " as int")
+	}
+
+	percentage, err = strconv.ParseFloat(args[1], 64)
+	if err != nil {
+		err = errors.New("unable to parse " + string(args[1]) + " as float")
+	}
+
+	attribute.Id = id
+	attribute.Percentage = percentage
+
+	return &attribute, err
+
+}
+
+func getAttributeListAsBytes(attribute []Attribute) ([]byte, error){
+
+	var attributeBytes []byte
+	var err error
+
+	attributeBytes, err = json.Marshal(attribute)
+	if err != nil{
+		err = errors.New("Unable to convert list of attributes to json string")
+	}
+
+	return attributeBytes, err
+
+}
+
+
+func getPropertyAsBytes(property Property) ([]byte, error){
+
+	var propertyBytes []byte
+	var err error
+
+	propertyBytes, err = json.Marshal(property)
+	if err != nil{
+		err = errors.New("Unable to convert property to json string")
+	}
+
+	return propertyBytes, err
+
+}
+
+func getFormattedTimeAsString(time time.Time, format string)(string, error){
+
+	var err error
+	var formattedTimeString string
+
+	formattedTimeString = time.Format(format)
+	if len(formattedTimeString) == 0 {
+		err = errors.New("Unable to format time " + string(time.String()))
+	}
+
+	return formattedTimeString, err
+
+}
 
 func main() {
 	err := shim.Start(new(Chaincode))
