@@ -42,9 +42,18 @@ type ActivePoll struct{
 	Token		int 				`json:"token"`
 }
 
+type Poll struct{
+	Name 		string 				`json:"name"`
+	Count 		int 				`json:"count"`
+}
+
 type User struct{
 	Active 		[]ActivePoll 		`json:"active"`
 	Inactive	[]string 			`json:"inactive"`
+}
+
+type Poll struct{
+	Option 		[]Poll 				`json:"option"`
 }
 
 func (t *SimpleChaincode) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
@@ -163,7 +172,7 @@ func (t *SimpleChaincode) addUser(stub shim.ChaincodeStubInterface, args []strin
 	return shim.Success(nil)
 }
 
-//peer chaincode query -C mychannel -n mycc -c '{"Args":["newQuery","c"]}'
+//peer chaincode query -C mychannel -n mycc -c '{"Args":["queryUser","c"]}'
 func (t *SimpleChaincode) queryUser(stub shim.ChaincodeStubInterface, args []string) pb.Response {
 
     var key string // Entities
