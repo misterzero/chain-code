@@ -13,7 +13,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-
 package main
 
 //WARNING - this chaincode's ID is hard-coded in chaincode_example04 to illustrate one way of
@@ -25,35 +24,32 @@ package main
 import (
 	"fmt"
 	"strconv"
-
 	"github.com/hyperledger/fabric/core/chaincode/shim"
 	pb "github.com/hyperledger/fabric/protos/peer"
 	"time"
-	"math/big"
 )
 
 // SimpleChaincode example simple Chaincode implementation
-type SimpleChaincode struct {
+type Chaincode struct {
 }
 
-// ----- Ownership ----- //
 type Ownership struct {
-	Id       	string       `json:"id"`
-	Percentage 	big.Float      `json:"percentage"`
+	Properties	[]Attribute	`json:"properties"`
 }
 
-// ----- Property ----- //
 type Property struct {
-	Id		string		`json:"id"`
 	Date		time.Time 	`json:"dateOfSale"`
-	SalePrice	big.Float	`json:"salePrice"`
-	Owners		[]Ownership	`json:"owners"`
-	Buyers		[]Ownership	`json:"buyers"`
+	SalePrice	float64		`json:"salePrice"`
+	Owners		[]Attribute	`json:"owners"`
 }
 
+type Attribute struct {
+	Id		int64		`json:"id"`
+	Percentage 	float64		`json:"percentage"`
+}
 
-
-func (t *SimpleChaincode) Init(stub shim.ChaincodeStubInterface) pb.Response {
+//TODO; need to set up to where only one account is intialized
+func (t *Chaincode) Init(stub shim.ChaincodeStubInterface) pb.Response {
 	fmt.Println("ex02 Init")
 	_, args := stub.GetFunctionAndParameters()
 	var A, B string    // Entities
@@ -91,7 +87,8 @@ func (t *SimpleChaincode) Init(stub shim.ChaincodeStubInterface) pb.Response {
 	return shim.Success(nil)
 }
 
-func (t *SimpleChaincode) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
+
+func (t *Chaincode) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
 	fmt.Printf("Invoke")
 	function, args := stub.GetFunctionAndParameters()
 	if function == "move" {
@@ -111,7 +108,7 @@ func (t *SimpleChaincode) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
 }
 
 // Transaction makes payment of X units from A to B
-func (t *SimpleChaincode) move(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+func (t *Chaincode) move(stub shim.ChaincodeStubInterface, args []string) pb.Response {
 	var A, B string    // Entities
 	var Aval, Bval int // Asset holdings
 	var X int          // Transaction value
@@ -168,7 +165,7 @@ func (t *SimpleChaincode) move(stub shim.ChaincodeStubInterface, args []string) 
 }
 
 // Deletes an entity from state
-func (t *SimpleChaincode) delete(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+func (t *Chaincode) delete(stub shim.ChaincodeStubInterface, args []string) pb.Response {
 	if len(args) != 1 {
 		return shim.Error("Incorrect number of arguments. Expecting 1")
 	}
@@ -185,7 +182,7 @@ func (t *SimpleChaincode) delete(stub shim.ChaincodeStubInterface, args []string
 }
 
 // query callback representing the query of a chaincode
-func (t *SimpleChaincode) query(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+func (t *Chaincode) query(stub shim.ChaincodeStubInterface, args []string) pb.Response {
 	var A string // Entities
 	var err error
 
@@ -216,7 +213,7 @@ func (t *SimpleChaincode) query(stub shim.ChaincodeStubInterface, args []string)
 }
 
 // query callback representing the query of a chaincode
-func (t *SimpleChaincode) findAll(stub shim.ChaincodeStubInterface) pb.Response {
+func (t *Chaincode) findAll(stub shim.ChaincodeStubInterface) pb.Response {
 	var err error
 
 	aKey := "a"
@@ -274,8 +271,11 @@ func getFullByteArray(id string, byteArray []byte) ([]byte, error){
 	return fullStruct, nil
 }
 
+//====================================================================================================================
+
+
 func main() {
-	err := shim.Start(new(SimpleChaincode))
+	err := shim.Start(new(Chaincode))
 	if err != nil {
 		fmt.Printf("Error starting Simple chaincode: %s", err)
 	}
