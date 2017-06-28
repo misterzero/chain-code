@@ -13,6 +13,16 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+
+//TODO
+// - getOwnership(id) Ownership (CurrentState)
+// - getAllOwnership(list<id>) list<Ownership>
+// - getOwnershipHistory(id) Ownership (History)
+// - getProperty(id) Property (CurrentState)
+// - getAllProperty(list<id>) list<Property> (CurrentState)
+// - getPropertyHistory(id) Property (History)
+// - propertyTransaction(Date, SalePrice, list<Attribute>) nil
+
 package main
 
 //WARNING - this chaincode's ID is hard-coded in chaincode_example04 to illustrate one way of
@@ -50,43 +60,8 @@ type Attribute struct {
 	Percentage 	float64		`json:"percentage"`
 }
 
-//TODO; need to set up to where only one account is intialized
 func (t *Chaincode) Init(stub shim.ChaincodeStubInterface) pb.Response {
-	fmt.Println("ex02 Init")
-	_, args := stub.GetFunctionAndParameters()
-	var A, B string    // Entities
-	var Aval, Bval int // Asset holdings
-	var err error
-
-	if len(args) != 4 {
-		return shim.Error("Incorrect number of arguments. Expecting 4")
-	}
-
-	// Initialize the chaincode
-	A = args[0]
-	Aval, err = strconv.Atoi(args[1])
-	if err != nil {
-		return shim.Error("Expecting integer value for asset holding")
-	}
-	B = args[2]
-	Bval, err = strconv.Atoi(args[3])
-	if err != nil {
-		return shim.Error("Expecting integer value for asset holding")
-	}
-	fmt.Printf("Aval = %d, Bval = %d\n", Aval, Bval)
-
-	// Write the state to the ledger
-	err = stub.PutState(A, []byte(strconv.Itoa(Aval)))
-	if err != nil {
-		return shim.Error(err.Error())
-	}
-
-	err = stub.PutState(B, []byte(strconv.Itoa(Bval)))
-	if err != nil {
-		return shim.Error(err.Error())
-	}
-
-	return shim.Success(nil)
+	//do not want to initialize anything here
 }
 
 
