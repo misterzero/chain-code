@@ -22,7 +22,6 @@ limitations under the License.
 // - getAllProperty(list<id>) list<Property> (CurrentState)
 // - getPropertyHistory(id) Property (History)
 // - propertyTransaction(Date, SalePrice, list<Attribute>) nil
-
 package main
 
 //WARNING - this chaincode's ID is hard-coded in chaincode_example04 to illustrate one way of
@@ -60,8 +59,45 @@ type Attribute struct {
 	Percentage 	float64		`json:"percentage"`
 }
 
+//TODO; need to set up to where only one account is intialized
 func (t *Chaincode) Init(stub shim.ChaincodeStubInterface) pb.Response {
-	//do not want to initialize anything here
+	
+	genesisKey := "genesisKey"
+	genesisByteArray := []byte{}
+
+	err := stub.PutState(genesisKey, genesisByteArray)
+	if err != nil {
+		return shim.Error("Unable to initialize genesis block")
+	}
+
+	return shim.Success(nil)
+
+}
+
+func (t *Chaincode) processTransaction(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+	var A string    // Entities
+	var Aval int // Asset holdings
+	var err error
+
+	if len(args) != 2 {
+		return shim.Error("Incorrect number of arguments. Expecting 4")
+	}
+
+	// Initialize the chaincode
+	A = args[0]
+	Aval, err = strconv.Atoi(args[1])
+	if err != nil {
+		return shim.Error("Expecting integer value for asset holding")
+	}
+	fmt.Printf("Aval = %d", Aval)
+
+	// Write the state to the ledger
+	err = stub.PutState(A, []byte(strconv.Itoa(Aval)))
+	if err != nil {
+		return shim.Error(err.Error())
+	}
+
+	return shim.Success(nil)
 }
 
 
@@ -79,6 +115,8 @@ func (t *Chaincode) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
 		return t.query(stub, args)
 	} else if function == "findAll" {
 		return t.findAll(stub)
+	} else if  function == "processTransasction" {
+		return t.processTransaction(stub, args)
 	}
 
 	return shim.Error("Invalid invoke function name. Expecting \"move\" \"delete\" \"query\" \"findAll\"")
