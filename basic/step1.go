@@ -72,19 +72,22 @@ func (t *SimpleChaincode) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
 		return t.findAll(stub)
 	} else if function == "addUser" {
 		return t.addUser(stub, args)
-	} else if function == "queryUser" {
-		return t.queryUser(stub, args)
+	} else if function == "newQuery" {
+		return t.newQuery(stub, args)
 	} else if function == "addNewActivePollToUser" {
 		return t.addNewActivePollToUser(stub, args)
 	} else if function == "ActiveToInactivePoll" {
 		return t.ActiveToInactivePoll(stub, args)
 	} else if function == "addNewPoll" {
 		return t.addNewPoll(stub, args)
+	} else if function == "vote" {
+		return t.vote(stub, args)
 	}
 
 	return shim.Error("Invalid invoke function name. Expecting \"move\" \"delete\" \"query\" \"findAll\"")
 }
 
+//TODO modify
 func (t *SimpleChaincode) Init(stub shim.ChaincodeStubInterface) pb.Response {
 	fmt.Println("ex02 Init")
 	_, args := stub.GetFunctionAndParameters()
@@ -174,9 +177,9 @@ func (t *SimpleChaincode) addUser(stub shim.ChaincodeStubInterface, args []strin
 	return shim.Success(nil)
 }
 
-//peer chaincode query -C mychannel -n mycc -c '{"Args":["queryUser","c"]}'
-//peer chaincode query -C mychannel -n mycc -c '{"Args":["queryUser","my_poll0"]}'
-func (t *SimpleChaincode) queryUser(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+//peer chaincode query -C mychannel -n mycc -c '{"Args":["newQuery","c"]}'
+//peer chaincode query -C mychannel -n mycc -c '{"Args":["newQuery","my_poll0"]}'
+func (t *SimpleChaincode) newQuery(stub shim.ChaincodeStubInterface, args []string) pb.Response {
 
     var key string // Entities
 
@@ -215,15 +218,16 @@ func (t *SimpleChaincode) queryUser(stub shim.ChaincodeStubInterface, args []str
     fmt.Printf("Query Response:%s\n", jsonResp)
 
     return shim.Success(keyValBytes)
-
 }
 
-//peer chaincode invoke -o orderer.example.com:7050 -C mychannel -n mycc -c '{"Args":["addNewActivePollToUser","c","my new poll"]}'
+//peer chaincode invoke -o orderer.example.com:7050 -C mychannel -n mycc -c '{"Args":["addNewActivePollToUser","c","my_poll0"]}'
+//peer chaincode invoke -o orderer.example.com:7050 -C mychannel -n mycc -c '{"Args":["addNewActivePollToUser","c","my_poll1"]}'
+//peer chaincode invoke -o orderer.example.com:7050 -C mychannel -n mycc -c '{"Args":["addNewActivePollToUser","c","my_poll2"]}'
 func (t *SimpleChaincode) addNewActivePollToUser(stub shim.ChaincodeStubInterface, args []string) pb.Response {
 	var user User 
 	var userAsJsonByteArray []byte
     var userAsJsonString string
-    var userExists bool
+    var userExists, pollExists, pollAlreadyAddToUser bool
     var err error
     var pollToAdd ActivePoll
 
@@ -246,6 +250,11 @@ func (t *SimpleChaincode) addNewActivePollToUser(stub shim.ChaincodeStubInterfac
 
     }
 
+    pollExists, err = isExistingPoll(stub, args[1])
+    if pollExists==false{
+    	return shim.Error("No poll with name:" + args[1])
+    }
+
 	userAsBytes, err := stub.GetState(key)
 
     if err != nil{
@@ -255,21 +264,20 @@ func (t *SimpleChaincode) addNewActivePollToUser(stub shim.ChaincodeStubInterfac
     }
 
     user, err = getUserFromJsonByteArray(userAsBytes)
-	
-
     if err != nil{
-
         return shim.Error(err.Error())
+    }
 
+    pollAlreadyAddToUser, err = isPollAlreadyAddToUser(stub, key, args[1])
+    if pollAlreadyAddToUser==true {
+    	return shim.Error("this poll: " + args[1] + " has already been add to the user: " +key)
     }
 
     pollToAdd,err = createActivePoll(args[1])
-
     if err != nil{
-
         return shim.Error(err.Error())
-
     }
+
 
     user.Active = append(user.Active,pollToAdd)
 
@@ -291,12 +299,12 @@ func (t *SimpleChaincode) addNewActivePollToUser(stub shim.ChaincodeStubInterfac
 	return shim.Success(nil)
 }
 
-//peer chaincode invoke -o orderer.example.com:7050 -C mychannel -n mycc -c '{"Args":["ActiveToInactivePoll","c","my new poll1"]}'
+//peer chaincode invoke -o orderer.example.com:7050 -C mychannel -n mycc -c '{"Args":["ActiveToInactivePoll","c","my_poll0"]}'
 func (t *SimpleChaincode) ActiveToInactivePoll(stub shim.ChaincodeStubInterface, args []string) pb.Response {
 	var user User 
 	var userAsJsonByteArray []byte
     var userAsJsonString string
-    var userExists bool
+    var userExists, pollContained bool
     var err error
    	var pollName string
    	var indexOfThePoll int
@@ -328,6 +336,10 @@ func (t *SimpleChaincode) ActiveToInactivePoll(stub shim.ChaincodeStubInterface,
         return shim.Error(err.Error())
 
     }
+    if userAsBytes == nil {
+		return shim.Error("Entity not found")
+	}
+
 
     user, err = getUserFromJsonByteArray(userAsBytes)
 	
@@ -338,11 +350,17 @@ func (t *SimpleChaincode) ActiveToInactivePoll(stub shim.ChaincodeStubInterface,
 
     }
 
+    pollContained = false
     indexOfThePoll = 0
     for i := 0; i < len(user.Active); i++ {
         if user.Active[i].Name==pollName {
         	indexOfThePoll = i
+        	pollContained = true
         }
+    }
+
+    if pollContained==false {
+    	return shim.Error("No such poll for this user")
     }
 
     user.Active = append(user.Active[:indexOfThePoll], user.Active[indexOfThePoll+1:]...)
@@ -350,16 +368,10 @@ func (t *SimpleChaincode) ActiveToInactivePoll(stub shim.ChaincodeStubInterface,
     user.Inactive = append(user.Inactive,pollName)
 
     userAsJsonByteArray, err = getUserAsJsonByteArray(user)
-
     if err != nil{
-
         return shim.Error(err.Error())
-
     }
-
-
     userAsJsonString = string(userAsJsonByteArray)
-
 	err = stub.PutState(key, []byte(userAsJsonString))
 	if err != nil {
 		return shim.Error(err.Error())
@@ -385,7 +397,7 @@ func (t *SimpleChaincode) addNewPoll(stub shim.ChaincodeStubInterface, args []st
 
 	poll, err = createNewPoll(s)
 	if err != nil {
-		return shim.Error("Expecting integer value for asset holding")
+		return shim.Error("Expecting integer value for user holding")
 	}
 
 	pollAsJsonByteArray, err = getPollAsJsonByteArray(poll)
@@ -399,7 +411,7 @@ func (t *SimpleChaincode) addNewPoll(stub shim.ChaincodeStubInterface, args []st
         return shim.Error(err.Error())
     }
     if pollExists {
-        return shim.Error("An asset already exists with id:" + key)
+        return shim.Error("A poll already exists with id:" + key)
     }
 	
 
@@ -412,7 +424,104 @@ func (t *SimpleChaincode) addNewPoll(stub shim.ChaincodeStubInterface, args []st
 	return shim.Success(nil)
 }
 
+//peer chaincode invoke -o orderer.example.com:7050 -C mychannel -n mycc -c '{"Args":["vote","c","my_poll0","opt1"]}'
+func (t *SimpleChaincode) vote(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+	var userAsJsonBytes, pollAsJsonBytes []byte
+	var userAsJsonString, pollAsJsonString string
+	var UserAllowed, userExists, pollExists, optionExists bool
+	var pollKey, userKey, option string
+	var err error
+	var user User
+	var poll Poll
+	var indexOfThePoll, indexOfTheOption int
+
+	if len(args) < 3 {
+		return shim.Error("put operation must include three arguments, a userKey, a pollKey and an option ")
+	}
+
+	userKey = args[0]
+	pollKey = args[1]
+	option = args[2]
+
+
+	userExists, err = isExistingUser(stub, userKey)
+    if err != nil {
+        return shim.Error(err.Error())
+    }
+    if userExists==false {
+        return shim.Error("No user with id:" + userKey)
+    }
+
+    pollExists, err = isExistingPoll(stub, pollKey)
+    if err != nil {
+        return shim.Error(err.Error())
+    }
+    if pollExists==false {
+        return shim.Error("No poll named: " + pollKey + " has been created")
+    }
+
+    UserAllowed, indexOfThePoll, err = isUserAllowed(stub,userKey,pollKey)
+    if UserAllowed==false {
+    	return shim.Error("The user: " + userKey + " is not allowed to participate to this poll")
+    }
+
+    optionExists, indexOfTheOption, err = isExistingOption(stub,pollKey,option)
+    if optionExists==false {
+    	return shim.Error("The option: " + option + " does not exist")
+    }
+
+    userAsJsonBytes, err = stub.GetState(userKey)
+    if err != nil{
+        return shim.Error(err.Error())
+    }
+    if userAsJsonBytes == nil {
+		return shim.Error("Entity not found")
+	}
+    user, err = getUserFromJsonByteArray(userAsJsonBytes)
+	if err != nil{
+        return shim.Error(err.Error())
+    }
+
+    pollAsJsonBytes, err = stub.GetState(pollKey)
+    if err != nil{
+        return shim.Error(err.Error())
+    }
+    if pollAsJsonBytes == nil {
+		return shim.Error("Entity not found")
+	}
+    poll, err = getPollFromJsonByteArray(pollAsJsonBytes)
+	if err != nil{
+        return shim.Error(err.Error())
+    }
+
+    user.Active[indexOfThePoll].Token = user.Active[indexOfThePoll].Token - 1
+    poll.Options[indexOfTheOption].Count = poll.Options[indexOfTheOption].Count + 1
+
+    userAsJsonBytes, err = getUserAsJsonByteArray(user)
+    if err != nil{
+        return shim.Error(err.Error())
+    }
+    userAsJsonString = string(userAsJsonBytes)
+    err = stub.PutState(userKey, []byte(userAsJsonString))
+	if err != nil {
+		return shim.Error(err.Error())
+	}
+
+	pollAsJsonBytes, err = getPollAsJsonByteArray(poll)
+	if err != nil{
+        return shim.Error(err.Error())
+    }
+    pollAsJsonString = string(pollAsJsonBytes)
+	err = stub.PutState(pollKey, []byte(pollAsJsonString))
+	if err != nil {
+		return shim.Error(err.Error())
+	}
+
+	return shim.Success(nil)
+}
+
 // Transaction makes payment of X units from A to B
+//TODO delete
 func (t *SimpleChaincode) move(stub shim.ChaincodeStubInterface, args []string) pb.Response {
 	var A, B string    // Entities
 	var Aval, Bval int // Asset holdings
@@ -470,6 +579,7 @@ func (t *SimpleChaincode) move(stub shim.ChaincodeStubInterface, args []string) 
 }
 
 // Deletes an entity from state
+//TODO modify
 func (t *SimpleChaincode) delete(stub shim.ChaincodeStubInterface, args []string) pb.Response {
 	if len(args) != 1 {
 		return shim.Error("Incorrect number of arguments. Expecting 1")
@@ -487,6 +597,7 @@ func (t *SimpleChaincode) delete(stub shim.ChaincodeStubInterface, args []string
 }
 
 // query callback representing the query of a chaincode
+//TODO delete
 func (t *SimpleChaincode) query(stub shim.ChaincodeStubInterface, args []string) pb.Response {
 	var A string // Entities
 	var err error
@@ -517,6 +628,7 @@ func (t *SimpleChaincode) query(stub shim.ChaincodeStubInterface, args []string)
 	return shim.Success(jsonAvalBytes)
 }
 
+//TODO delete
 // query callback representing the query of a chaincode
 func (t *SimpleChaincode) findAll(stub shim.ChaincodeStubInterface) pb.Response {
 	var err error
@@ -558,6 +670,7 @@ func (t *SimpleChaincode) findAll(stub shim.ChaincodeStubInterface) pb.Response 
 	return shim.Success(aAndBvalueResponse)
 }
 
+//TODO delete
 func getAllFullByteArrays(aValBytes []byte, bValBytes []byte)([]byte, error){
 	aResult, err := getFullByteArray("a", aValBytes)
 	bResult, err := getFullByteArray("b", bValBytes)
@@ -568,6 +681,7 @@ func getAllFullByteArrays(aValBytes []byte, bValBytes []byte)([]byte, error){
 	return result, err
 }
 
+//TODO delete
 func getFullByteArray(id string, byteArray []byte) ([]byte, error){
 	byteString := `{"id":"` + id + `", "value":`+ string(byteArray) + `}`
 
@@ -641,6 +755,70 @@ func isExistingPoll(stub shim.ChaincodeStubInterface, key string) (bool, error){
     return result, err
 }
 
+func isUserAllowed(stub shim.ChaincodeStubInterface, userKey string, pollKey string) (bool, int, error){
+
+    var err error
+    index :=0
+    result := false
+
+    userAsBytes, err := stub.GetState(userKey)
+
+    user, err := getUserFromJsonByteArray(userAsBytes)
+
+    for i := 0; i < len(user.Active); i++ {
+        if user.Active[i].Name==pollKey {
+        	if user.Active[i].Token >0{
+	        	result = true
+	        	index = i
+	        }
+        }
+    }
+
+    return result, index, err
+}
+
+func isPollAlreadyAddToUser(stub shim.ChaincodeStubInterface, userKey string, pollKey string) (bool, error){
+
+    var err error
+    result := false
+
+    userAsBytes, err := stub.GetState(userKey)
+
+    user, err := getUserFromJsonByteArray(userAsBytes)
+
+    for i := 0; i < len(user.Active); i++ {
+        if user.Active[i].Name==pollKey {
+        	if user.Active[i].Token >0{
+	        	result = true
+	        }
+        }
+    }
+    for i := 0; i < len(user.Inactive); i++ {
+        if user.Inactive[i]==pollKey {
+	        result = true
+        }
+    }
+    return result, err
+}
+
+func isExistingOption(stub shim.ChaincodeStubInterface, pollKey string, option string) (bool, int, error){
+
+    var err error
+    indexOfTheOption := 0
+    result := false
+    pollAsBytes, err := stub.GetState(pollKey)
+    poll, err := getPollFromJsonByteArray(pollAsBytes)
+
+    for i := 0; i < len(poll.Options); i++ {
+        if poll.Options[i].Name==option {
+        	result = true
+        	indexOfTheOption=i
+        }
+    }
+
+    return result,indexOfTheOption, err
+}
+
 func getUserAsJsonByteArray(user User) ([]byte, error){
 
     var jsonUser []byte
@@ -651,7 +829,7 @@ func getUserAsJsonByteArray(user User) ([]byte, error){
 
     if err != nil{
 
-        errors.New("Unable to convert asset to json string")
+        errors.New("Unable to convert user to json string")
 
     }
 
@@ -687,10 +865,23 @@ func getPollAsJsonByteArray(poll Poll) ([]byte, error){
 
     if err != nil{
 
-        errors.New("Unable to convert asset to json string")
+        errors.New("Unable to convert poll to json string")
 
     }
 
     return jsonPoll, err
 
 }
+
+
+func getPollFromJsonByteArray(pollAsJsonByte []byte) (Poll, error){
+    var poll Poll
+    var err error
+
+    err = json.Unmarshal(pollAsJsonByte, &poll)
+    if err != nil{
+        errors.New("Unable to convert poll to json string")
+    }
+    return poll, err
+}
+
