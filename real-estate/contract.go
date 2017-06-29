@@ -24,12 +24,6 @@ limitations under the License.
 // - propertyTransaction(Date, SalePrice, list<Attribute>) nil
 package main
 
-//WARNING - this chaincode's ID is hard-coded in chaincode_example04 to illustrate one way of
-//calling chaincode from a chaincode. If this example is modified, chaincode_example04.go has
-//to be modified as well with the new ID of chaincode_example02.
-//chaincode_example05 show's how chaincode ID can be passed in as a parameter instead of
-//hard-coding.
-
 import (
 	"fmt"
 	"strconv"
@@ -40,7 +34,6 @@ import (
 	pb "github.com/hyperledger/fabric/protos/peer"
 )
 
-// SimpleChaincode example simple Chaincode implementation
 type Chaincode struct {
 }
 
@@ -59,19 +52,9 @@ type Attribute struct {
 	Percentage 	float64		`json:"percentage"`
 }
 
-//TODO; need to set up to where only one account is intialized
 func (t *Chaincode) Init(stub shim.ChaincodeStubInterface) pb.Response {
-	
-	genesisKey := "genesisKey"
-	genesisByteArray := []byte{}
-
-	err := stub.PutState(genesisKey, genesisByteArray)
-	if err != nil {
-		return shim.Error("Unable to initialize genesis block")
-	}
-
+	//No initialization requirements of chain code required at this time
 	return shim.Success(nil)
-
 }
 
 func (t *Chaincode) processTransaction(stub shim.ChaincodeStubInterface, args []string) pb.Response {
