@@ -53,7 +53,8 @@ type User struct{
 }
 
 type Poll struct{
-	Options 		[]Option 				`json:"options"`
+	Options 		[]Option 		`json:"options"`
+	Status 			int 			`json:"status"`
 }
 
 func (t *SimpleChaincode) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
@@ -82,6 +83,8 @@ func (t *SimpleChaincode) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
 		return t.addNewPoll(stub, args)
 	} else if function == "vote" {
 		return t.vote(stub, args)
+	} else if function == "changeStatusToZero" {
+		return t.changeStatusToZero(stub, args)
 	}
 
 	return shim.Error("Invalid invoke function name. Expecting \"move\" \"delete\" \"query\" \"findAll\"")
@@ -380,7 +383,7 @@ func (t *SimpleChaincode) ActiveToInactivePoll(stub shim.ChaincodeStubInterface,
 	return shim.Success(nil)
 }
 
-//peer chaincode invoke -o orderer.example.com:7050 -C mychannel -n mycc -c '{"Args":["addNewPoll","my_poll0","{\"Options\":[{\"Name\":\"opt1\",\"Count\":0},{\"Name\":\"opt2\",\"Count\":0}]}"]}'
+//peer chaincode invoke -o orderer.example.com:7050 -C mychannel -n mycc -c '{"Args":["addNewPoll","my_poll0","{\"Options\":[{\"Name\":\"opt1\",\"Count\":0},{\"Name\":\"opt2\",\"Count\":0}],\"status\":1}"]}'
 func (t *SimpleChaincode) addNewPoll(stub shim.ChaincodeStubInterface, args []string) pb.Response {
 	var poll Poll
 	var pollAsJsonByteArray []byte
@@ -428,7 +431,7 @@ func (t *SimpleChaincode) addNewPoll(stub shim.ChaincodeStubInterface, args []st
 func (t *SimpleChaincode) vote(stub shim.ChaincodeStubInterface, args []string) pb.Response {
 	var userAsJsonBytes, pollAsJsonBytes []byte
 	var userAsJsonString, pollAsJsonString string
-	var UserAllowed, userExists, pollExists, optionExists bool
+	var UserAllowed, userExists, pollExists, optionExists, statusOne bool
 	var pollKey, userKey, option string
 	var err error
 	var user User
@@ -494,6 +497,11 @@ func (t *SimpleChaincode) vote(stub shim.ChaincodeStubInterface, args []string) 
         return shim.Error(err.Error())
     }
 
+    statusOne, err = isStatusOne(stub, poll)
+    if statusOne == false {
+    	return shim.Error("the current poll is closed")
+    }
+
     user.Active[indexOfThePoll].Token = user.Active[indexOfThePoll].Token - 1
     poll.Options[indexOfTheOption].Count = poll.Options[indexOfTheOption].Count + 1
 
@@ -512,6 +520,41 @@ func (t *SimpleChaincode) vote(stub shim.ChaincodeStubInterface, args []string) 
         return shim.Error(err.Error())
     }
     pollAsJsonString = string(pollAsJsonBytes)
+	err = stub.PutState(pollKey, []byte(pollAsJsonString))
+	if err != nil {
+		return shim.Error(err.Error())
+	}
+
+	return shim.Success(nil)
+}
+//peer chaincode invoke -o orderer.example.com:7050 -C mychannel -n mycc -c '{"Args":["changeStatusToZero","my_poll0"]}'
+func (t *SimpleChaincode) changeStatusToZero(stub shim.ChaincodeStubInterface, args []string) pb.Response{
+	var pollKey, pollAsJsonString string
+	var pollAsBytes []byte
+	var poll Poll
+	var statusOne bool
+	var err error
+
+	if len(args) != 1 {
+		return shim.Error("put operation must include three arguments, a userKey, a pollKey and an option ")
+	}
+	
+	pollKey = args[0]
+	pollAsBytes, err = stub.GetState(pollKey)
+    poll, err = getPollFromJsonByteArray(pollAsBytes)
+
+    statusOne, err = isStatusOne(stub, poll)
+    if statusOne == false{
+    	return shim.Error("The status of the poll: "+ pollKey +" has already been changed")
+    }
+
+    poll.Status = poll.Status - 1
+
+    pollAsBytes, err = getPollAsJsonByteArray(poll)
+	if err != nil{
+        return shim.Error(err.Error())
+    }
+    pollAsJsonString = string(pollAsBytes)
 	err = stub.PutState(pollKey, []byte(pollAsJsonString))
 	if err != nil {
 		return shim.Error(err.Error())
@@ -817,6 +860,18 @@ func isExistingOption(stub shim.ChaincodeStubInterface, pollKey string, option s
     }
 
     return result,indexOfTheOption, err
+}
+
+func isStatusOne(stub shim.ChaincodeStubInterface, poll Poll) (bool,error){
+	var err error
+	var result bool
+
+	result = false
+    if poll.Status == 1 {
+    	result = true
+    }
+
+    return result, err
 }
 
 func getUserAsJsonByteArray(user User) ([]byte, error){
