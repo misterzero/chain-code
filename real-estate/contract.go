@@ -34,8 +34,8 @@ type Chaincode struct {
 // - getOwnership(id) Ownership (CurrentState)
 // - getOwnershipHistory(id) Ownership (History)
 // - getProperty(id) Property (CurrentState)
-// - getPropertyHistory(id) Property (History)				*
-// - propertyTransaction(Date, SalePrice, list<Attribute>) nil
+// - getPropertyHistory(id) 						*
+// - propertyTransaction 						*
 
 //TODO
 // - make sure errors are all handled (custom responses where needed)
@@ -65,9 +65,9 @@ func (t *Chaincode) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
 	if function == "delete" {
 		// Deletes an entity from its state
 		return t.delete(stub, args)
-	} else if function == "queryProperty" {
+	} else if function == "getProperty" {
 		// the old "Query" is now implemtned in invoke
-		return t.queryProperty(stub, args)
+		return t.getProperty(stub, args)
 	} else if  function == "propertyTransaction" {
 		return t.propertyTransaction(stub, args)
 	} else if function == "getPropertyHistory" {
@@ -93,44 +93,6 @@ func (t *Chaincode) delete(stub shim.ChaincodeStubInterface, args []string) pb.R
 	}
 
 	return shim.Success(nil)
-}
-
-// query callback representing the query of a chaincode
-func (t *Chaincode) query(stub shim.ChaincodeStubInterface, args []string) pb.Response {
-	var A string // Entities
-	var err error
-
-	if len(args) != 1 {
-		return shim.Error("Incorrect number of arguments. Expecting name of the person to query")
-	}
-
-	A = args[0]
-
-	// Get the state from the ledger
-	Avalbytes, err := stub.GetState(A)
-	if err != nil {
-		return shim.Error(err.Error())
-	}
-
-	if Avalbytes == nil {
-		jsonResp := "{\"Error\":\"Nil amount for " + A + "\"}"
-		return shim.Error(jsonResp)
-	}
-
-	jsonResp := "{\"Name\":\"" + A + "\",\"Amount\":\"" + string(Avalbytes) + "\"}"
-	fmt.Printf("Query Response:%s\n", jsonResp)
-
-	jsonAvalBytes, err := getFullByteArray(A, Avalbytes)
-
-	return shim.Success(jsonAvalBytes)
-}
-
-func getFullByteArray(id string, byteArray []byte) ([]byte, error){
-	byteString := `{"id":"` + id + `", "value":`+ string(byteArray) + `}`
-
-	fullStruct := []byte(byteString)
-
-	return fullStruct, nil
 }
 
 //====================================================================================================================
@@ -323,7 +285,7 @@ func (t *Chaincode) propertyTransaction(stub shim.ChaincodeStubInterface, args [
 }
 
 //peer chaincode query -C mychannel -n mycc -c '{"Args":["queryProperty","property_1"]}'
-func (t *Chaincode) queryProperty(stub shim.ChaincodeStubInterface, args []string) pb.Response{
+func (t *Chaincode) getProperty(stub shim.ChaincodeStubInterface, args []string) pb.Response{
 	var propertyId string
 	var err error
 
