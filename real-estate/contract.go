@@ -37,19 +37,26 @@ import (
 type Chaincode struct {
 }
 
+//TODO
+// - getOwnership(id) Ownership (CurrentState)
+// - getOwnershipHistory(id) Ownership (History)
+// - getProperty(id) Property (CurrentState)
+// - getPropertyHistory(id) Property (History)
+// - propertyTransaction(Date, SalePrice, list<Attribute>) nil
+
 type Ownership struct {
-	Properties	[]Attribute	`json:"properties"`
+	Properties	[]Attribute			`json:"properties"`
 }
 
 type Property struct {
-	Date		time.Time 	`json:"dateOfSale"`
-	SalePrice	float64		`json:"salePrice"`
-	Owners		[]Attribute	`json:"owners"`
+	SaleDate		string			`json:"saleDate"`
+	SalePrice	        float64 		`json:"salePrice"`
+	Owners 			[]Attribute 		`json:"owners"`
 }
 
 type Attribute struct {
-	Id		int64		`json:"id"`
-	Percentage 	float64		`json:"percentage"`
+	Id			string		`json:"id"`
+	Percentage 		float64		`json:"percentage"`
 }
 
 func (t *Chaincode) Init(stub shim.ChaincodeStubInterface) pb.Response {
@@ -57,25 +64,39 @@ func (t *Chaincode) Init(stub shim.ChaincodeStubInterface) pb.Response {
 	return shim.Success(nil)
 }
 
-func (t *Chaincode) processTransaction(stub shim.ChaincodeStubInterface, args []string) pb.Response {
-	var A string    // Entities
-	var Aval int // Asset holdings
+
+func (t *Chaincode) propertySale(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+	var propertyId string
+	var propertyString string
 	var err error
 
 	if len(args) != 2 {
 		return shim.Error("Incorrect number of arguments. Expecting 4")
 	}
 
-	// Initialize the chaincode
-	A = args[0]
-	Aval, err = strconv.Atoi(args[1])
+	propertyId = args[0]
+	propertyString = args[1]
+	fmt.Printf("PropertyId = %d", propertyId)
+
+	property := Property{}
+
+	err = json.Unmarshal([]byte(propertyString), &property)
 	if err != nil {
-		return shim.Error("Expecting integer value for asset holding")
+		return shim.Error(err.Error())
 	}
-	fmt.Printf("Aval = %d", Aval)
+
+	err = confirmValidPercentage(property.Owners)
+	if err != nil {
+		return shim.Error(err.Error())
+	}
 
 	// Write the state to the ledger
-	err = stub.PutState(A, []byte(strconv.Itoa(Aval)))
+	propertyAsBytes, err := getPropertyAsBytes(property)
+	if err != nil {
+		return shim.Error(err.Error())
+	}
+
+	err = stub.PutState(propertyId, propertyAsBytes)
 	if err != nil {
 		return shim.Error(err.Error())
 	}
@@ -83,6 +104,21 @@ func (t *Chaincode) processTransaction(stub shim.ChaincodeStubInterface, args []
 	return shim.Success(nil)
 }
 
+func confirmValidPercentage(buyers []Attribute) error{
+	var totalPercentage float64
+	var err error
+
+	for i := 0; i < len(buyers); i++ {
+		totalPercentage += buyers[i].Percentage
+	}
+
+	if totalPercentage != 1 {
+		totalPercentageString := fmt.Sprint(totalPercentage)
+		err = errors.New("Total Percentage is not correct: " + totalPercentageString)
+	}
+
+	return err
+}
 
 func (t *Chaincode) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
 	fmt.Printf("Invoke")
@@ -98,8 +134,8 @@ func (t *Chaincode) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
 		return t.query(stub, args)
 	} else if function == "findAll" {
 		return t.findAll(stub)
-	} else if  function == "processTransasction" {
-		return t.processTransaction(stub, args)
+	} else if  function == "propertySale" {
+		return t.propertySale(stub, args)
 	}
 
 	return shim.Error("Invalid invoke function name. Expecting \"move\" \"delete\" \"query\" \"findAll\"")
@@ -273,7 +309,7 @@ func getFullByteArray(id string, byteArray []byte) ([]byte, error){
 func createAttributeFromArgs(args []string) (*Attribute, error){
 
 	var attribute Attribute
-	var id int64
+	var id string
 	var percentage float64
 	var err error
 
@@ -281,10 +317,7 @@ func createAttributeFromArgs(args []string) (*Attribute, error){
 		err = errors.New("expected args length of 2, but received " + string(len(args)))
 	}
 
-	id, err = strconv.ParseInt(args[0], 10, 64)
-	if err != nil {
-		err = errors.New("unable to parse " + string(args[0]) + " as int")
-	}
+	id = args[0]
 
 	percentage, err = strconv.ParseFloat(args[1], 64)
 	if err != nil {
@@ -311,7 +344,6 @@ func getAttributeListAsBytes(attribute []Attribute) ([]byte, error){
 	return attributeBytes, err
 
 }
-
 
 func getPropertyAsBytes(property Property) ([]byte, error){
 
