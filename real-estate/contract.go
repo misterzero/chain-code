@@ -34,7 +34,7 @@ type Chaincode struct {
 // - getOwnership(id) Ownership (CurrentState)
 // - getOwnershipHistory(id) Ownership (History)
 // - getProperty(id) Property (CurrentState)
-// - getPropertyHistory(id) Property (History)
+// - getPropertyHistory(id) Property (History)				*
 // - propertyTransaction(Date, SalePrice, list<Attribute>) nil
 
 //TODO
@@ -62,83 +62,20 @@ func (t *Chaincode) Init(stub shim.ChaincodeStubInterface) pb.Response {
 func (t *Chaincode) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
 	fmt.Printf("Invoke")
 	function, args := stub.GetFunctionAndParameters()
-	if function == "move" {
-		// Make payment of X units from A to B
-		return t.move(stub, args)
-	} else if function == "delete" {
+	if function == "delete" {
 		// Deletes an entity from its state
 		return t.delete(stub, args)
-	} else if function == "query" {
-		// the old "Query" is now implemtned in invoke
-		return t.query(stub, args)
 	} else if function == "queryProperty" {
 		// the old "Query" is now implemtned in invoke
 		return t.queryProperty(stub, args)
-	} else if  function == "propertySale" {
-		return t.propertySale(stub, args)
+	} else if  function == "propertyTransaction" {
+		return t.propertyTransaction(stub, args)
 	} else if function == "getPropertyHistory" {
 		return t.getPropertyHistory(stub, args)
 	}
 
 	//TODO update
 	return shim.Error("Invalid invoke function name. Expecting \"move\" \"delete\" \"query\" \"findAll\"")
-}
-
-// Transaction makes payment of X units from A to B
-func (t *Chaincode) move(stub shim.ChaincodeStubInterface, args []string) pb.Response {
-	var A, B string    // Entities
-	var Aval, Bval int // Asset holdings
-	var X int          // Transaction value
-	var err error
-
-	if len(args) != 3 {
-		return shim.Error("Incorrect number of arguments. Expecting 3")
-	}
-
-	A = args[0]
-	B = args[1]
-
-	// Get the state from the ledger
-	// TODO: will be nice to have a GetAllState call to ledger
-	Avalbytes, err := stub.GetState(A)
-	if err != nil {
-		return shim.Error("Failed to get state")
-	}
-	if Avalbytes == nil {
-		return shim.Error("Entity not found")
-	}
-	Aval, _ = strconv.Atoi(string(Avalbytes))
-
-	Bvalbytes, err := stub.GetState(B)
-	if err != nil {
-		return shim.Error("Failed to get state")
-	}
-	if Bvalbytes == nil {
-		return shim.Error("Entity not found")
-	}
-	Bval, _ = strconv.Atoi(string(Bvalbytes))
-
-	// Perform the execution
-	X, err = strconv.Atoi(args[2])
-	if err != nil {
-		return shim.Error("Invalid transaction amount, expecting a integer value")
-	}
-	Aval = Aval - X
-	Bval = Bval + X
-	fmt.Printf("Aval = %d, Bval = %d\n", Aval, Bval)
-
-	// Write the state back to the ledger
-	err = stub.PutState(A, []byte(strconv.Itoa(Aval)))
-	if err != nil {
-		return shim.Error(err.Error())
-	}
-
-	err = stub.PutState(B, []byte(strconv.Itoa(Bval)))
-	if err != nil {
-		return shim.Error(err.Error())
-	}
-
-	return shim.Success(nil)
 }
 
 // Deletes an entity from state
@@ -346,7 +283,7 @@ func (t *Chaincode) getPropertyHistory(stub shim.ChaincodeStubInterface, args []
 
 //peer chaincode invoke -C mychannel -n mycc -c '{"Args":["propertySale","property_1","{\"saleDate\": \"2017-06-28T21:57:16\", \"salePrice\": 1000, \"owners\": [{\"id\":\"owner_3\",\"percentage\":0.45},{\"id\":\"owner_2\",\"percentage\":0.55}]}"]}'
 //peer chaincode invoke -C mychannel -n mycc -c '{"Args":["propertySale","property_1","{\"saleDate\": \"2017-06-28T21:57:16\", \"salePrice\": 1000, \"owners\": [{\"id\":\"owner_1\",\"percentage\":0.32},{\"id\":\"owner_4\",\"percentage\":0.68}]}"]}'
-func (t *Chaincode) propertySale(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+func (t *Chaincode) propertyTransaction(stub shim.ChaincodeStubInterface, args []string) pb.Response {
 	var propertyId string
 	var propertyString string
 	var err error
