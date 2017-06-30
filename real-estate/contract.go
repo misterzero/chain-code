@@ -74,12 +74,10 @@ func (t *Chaincode) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
 	} else if function == "queryProperty" {
 		// the old "Query" is now implemtned in invoke
 		return t.queryProperty(stub, args)
-	}else if function == "findAll" {
-		return t.findAll(stub)
 	} else if  function == "propertySale" {
 		return t.propertySale(stub, args)
-	} else if function == "getHistoryForProperty" {
-		return t.getHistoryForProperty(stub, args)
+	} else if function == "getPropertyHistory" {
+		return t.getPropertyHistory(stub, args)
 	}
 
 	//TODO update
@@ -190,57 +188,6 @@ func (t *Chaincode) query(stub shim.ChaincodeStubInterface, args []string) pb.Re
 	return shim.Success(jsonAvalBytes)
 }
 
-// query callback representing the query of a chaincode
-func (t *Chaincode) findAll(stub shim.ChaincodeStubInterface) pb.Response {
-	var err error
-
-	aKey := "a"
-	bKey := "b"
-
-	// Get the state from the ledger
-	Avalbytes, err := stub.GetState(aKey)
-	if err != nil {
-		jsonResp := "{\"Error\":\"Failed to get state for " + aKey + "\"}"
-		return shim.Error(jsonResp)
-	}
-
-	if Avalbytes == nil {
-		jsonResp := "{\"Error\":\"Nil amount for " + aKey + "\"}"
-		return shim.Error(jsonResp)
-	}
-
-	aJsonResp := "{\"Name\":\"" + aKey + "\",\"Amount\":\"" + string(Avalbytes) + "\"}"
-	fmt.Printf("Query Response:%s\n", aJsonResp)
-
-	Bvalbytes, err := stub.GetState(bKey)
-	if err != nil {
-		jsonResp := "{\"Error\":\"Failed to get state for " + bKey + "\"}"
-		return shim.Error(jsonResp)
-	}
-
-	if Bvalbytes == nil {
-		jsonResp := "{\"Error\":\"Nil amount for " + bKey + "\"}"
-		return shim.Error(jsonResp)
-	}
-
-	bJsonResp := "{\"Name\":\"" + bKey + "\",\"Amount\":\"" + string(Bvalbytes) + "\"}"
-	fmt.Printf("Query Response:%s\n", bJsonResp)
-
-	aAndBvalueResponse, err := getAllFullByteArrays(Avalbytes, Bvalbytes)
-
-	return shim.Success(aAndBvalueResponse)
-}
-
-func getAllFullByteArrays(aValBytes []byte, bValBytes []byte)([]byte, error){
-	aResult, err := getFullByteArray("a", aValBytes)
-	bResult, err := getFullByteArray("b", bValBytes)
-
-	resultString := `{"ledger":[`+ string(aResult) + `,` + string(bResult) + `]}`
-	result := []byte(resultString)
-
-	return result, err
-}
-
 func getFullByteArray(id string, byteArray []byte) ([]byte, error){
 	byteString := `{"id":"` + id + `", "value":`+ string(byteArray) + `}`
 
@@ -334,7 +281,7 @@ func confirmValidPercentage(buyers []Attribute) error{
 }
 
 //peer chaincode query -C mychannel -n mycc -c '{"Args":["getHistoryForProperty","property_1"]}'
-func (t *Chaincode) getHistoryForProperty(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+func (t *Chaincode) getPropertyHistory(stub shim.ChaincodeStubInterface, args []string) pb.Response {
 
 	if len(args) != 1 {
 		return shim.Error("Incorrect number of arguments. Expecting 1")
