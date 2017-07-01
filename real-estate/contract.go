@@ -18,7 +18,6 @@ package main
 
 import (
 	"fmt"
-	"time"
 	"bytes"
 	"errors"
 	"strconv"
@@ -32,15 +31,17 @@ type Chaincode struct {
 
 //TODO
 // - getOwnership(id) Ownership (CurrentState)				*
-// - getOwnershipHistory(id) Ownership (History)
+// - getOwnershipHistory(id) Ownership (History)			*
 // - getProperty(id) Property (CurrentState)				*
 // - getPropertyHistory(id) 						*
-// - propertyTransaction 						*
+// - propertyTransaction
 
 //TODO
 // - make sure errors are all handled (custom responses where needed)
 // - handle check for verifying ownership exists prior to processing transaction
 // - update ownership after transaction goes through
+// - remove comments that are not needed
+// - update error message for Invoke
 type Ownership struct {
 	Properties	[]Attribute			`json:"properties"`
 }
@@ -73,7 +74,10 @@ func (t *Chaincode) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
 	} else if function == "getOwnership" {
 		// the old "Query" is now implemtned in invoke
 		return t.getOwnership(stub, args)
-	} else if function == "getProperty" {
+	} else if function == "getOwnershipHistory" {
+		// the old "Query" is now implemtned in invoke
+		return t.getOwnershipHistory(stub, args)
+	}else if function == "getProperty" {
 		// the old "Query" is now implemtned in invoke
 		return t.getProperty(stub, args)
 	} else if  function == "propertyTransaction" {
@@ -84,6 +88,7 @@ func (t *Chaincode) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
 
 	return shim.Error("Invalid invoke function name. Expecting \"delete\" \"getProperty\" \"propertyTransaction\" \"getPropertyHistory\"")
 }
+
 //====================================================================================================================
 // Deletes an entity from state
 func (t *Chaincode) delete(stub shim.ChaincodeStubInterface, args []string) pb.Response {
@@ -140,20 +145,6 @@ func getAttributeListAsBytes(attribute []Attribute) ([]byte, error){
 	return attributeBytes, err
 
 }
-
-func getFormattedTimeAsString(time time.Time, format string)(string, error){
-
-	var err error
-	var formattedTimeString string
-
-	formattedTimeString = time.Format(format)
-	if len(formattedTimeString) == 0 {
-		err = errors.New("Unable to format time " + string(time.String()))
-	}
-
-	return formattedTimeString, err
-
-}
 //====================================================================================================================
 //peer chaincode invoke -C mychannel -n mycc -c '{"Args":["createOwnership","ownership_1","{\"properties\":[{\"id\":\"genesis\",\"percentage\":0}]}"]}'
 //peer chaincode invoke -C mychannel -n mycc -c '{"Args":["createOwnership","ownership_1","{\"properties\":[]}"]}'
@@ -189,7 +180,7 @@ func (t *Chaincode) createOwnership(stub shim.ChaincodeStubInterface, args []str
 
 }
 
-//peer chaincode query -C mychannel -n mycc -c '{"Args":["getOwnership","property_1"]}'
+//peer chaincode query -C mychannel -n mycc -c '{"Args":["getOwnership","ownership_1"]}'
 func (t *Chaincode) getOwnership(stub shim.ChaincodeStubInterface, args []string) pb.Response{
 
 	if len(args) != 1 {
@@ -212,6 +203,60 @@ func (t *Chaincode) getOwnership(stub shim.ChaincodeStubInterface, args []string
 	fmt.Printf("Query Response:%s\n", jsonResp)
 
 	return shim.Success(ownershipBytes)
+}
+
+//peer chaincode query -C mychannel -n mycc -c '{"Args":["getOwnershipHistory","ownership_1"]}'
+func (t *Chaincode) getOwnershipHistory(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+
+	if len(args) != 1 {
+		return shim.Error("Incorrect number of arguments. Expecting 1")
+	}
+
+	ownershipId := args[0]
+
+	resultsIterator, err := stub.GetHistoryForKey(ownershipId)
+	if err != nil {
+		return shim.Error(err.Error())
+	}
+	defer resultsIterator.Close()
+
+	// buffer is a JSON array containing historic values for the marble
+	var buffer bytes.Buffer
+	buffer.WriteString("[")
+
+	bArrayMemberAlreadyWritten := false
+	for resultsIterator.HasNext() {
+		response, err := resultsIterator.Next()
+		if err != nil {
+			return shim.Error(err.Error())
+		}
+		// Add a comma before array members, suppress it for the first array member
+		if bArrayMemberAlreadyWritten == true {
+			buffer.WriteString(",")
+		}
+		buffer.WriteString("{\"TxId\":")
+		buffer.WriteString("\"")
+		buffer.WriteString(response.TxId)
+		buffer.WriteString("\"")
+
+		buffer.WriteString(", \"Ownership\":")
+		// if it was a delete operation on given key, then we need to set the
+		//corresponding value null. Else, we will write the response.Value
+		//as-is (as the Value itself a JSON property)
+		if response.IsDelete {
+			buffer.WriteString("null")
+		} else {
+			buffer.WriteString(string(response.Value))
+		}
+
+		buffer.WriteString("}")
+		bArrayMemberAlreadyWritten = true
+	}
+	buffer.WriteString("]")
+
+	fmt.Printf("- getHistoryForProperty returning:\n%s\n", buffer.String())
+
+	return shim.Success(buffer.Bytes())
 }
 
 //peer chaincode invoke -C mychannel -n mycc -c '{"Args":["propertyTransaction","property_1","{\"saleDate\": \"2017-06-28T21:57:16\", \"salePrice\": 1000, \"owners\": [{\"id\":\"owner_3\",\"percentage\":0.45},{\"id\":\"owner_2\",\"percentage\":0.55}]}"]}'
@@ -257,7 +302,35 @@ func (t *Chaincode) propertyTransaction(stub shim.ChaincodeStubInterface, args [
 	return shim.Success(nil)
 }
 
-//peer chaincode query -C mychannel -n mycc -c '{"Args":["getHistoryForProperty","property_1"]}'
+//peer chaincode query -C mychannel -n mycc -c '{"Args":["getProperty","property_1"]}'
+func (t *Chaincode) getProperty(stub shim.ChaincodeStubInterface, args []string) pb.Response{
+	var propertyId string
+	var err error
+
+	if len(args) != 1 {
+		return shim.Error("Incorrect number of arguments. Expecting property id to query")
+	}
+
+	propertyId = args[0]
+
+	// Get the state from the ledger
+	propertyBytes, err := stub.GetState(propertyId)
+	if err != nil {
+		return shim.Error(err.Error())
+	}
+
+	if propertyBytes == nil {
+		jsonResp := "{\"Error\":\"Nil amount for " + propertyId + "\"}"
+		return shim.Error(jsonResp)
+	}
+
+	jsonResp := "{\"PropertyId\":\"" + propertyId + "\",\"Property Struct\":\"" + string(propertyBytes) + "\"}"
+	fmt.Printf("Query Response:%s\n", jsonResp)
+
+	return shim.Success(propertyBytes)
+}
+
+//peer chaincode query -C mychannel -n mycc -c '{"Args":["getPropertyHistory","property_1"]}'
 func (t *Chaincode) getPropertyHistory(stub shim.ChaincodeStubInterface, args []string) pb.Response {
 
 	if len(args) != 1 {
@@ -291,7 +364,7 @@ func (t *Chaincode) getPropertyHistory(stub shim.ChaincodeStubInterface, args []
 		buffer.WriteString(response.TxId)
 		buffer.WriteString("\"")
 
-		buffer.WriteString(", \"Value\":")
+		buffer.WriteString(", \"Property\":")
 		// if it was a delete operation on given key, then we need to set the
 		//corresponding value null. Else, we will write the response.Value
 		//as-is (as the Value itself a JSON property)
@@ -309,34 +382,6 @@ func (t *Chaincode) getPropertyHistory(stub shim.ChaincodeStubInterface, args []
 	fmt.Printf("- getHistoryForProperty returning:\n%s\n", buffer.String())
 
 	return shim.Success(buffer.Bytes())
-}
-
-//peer chaincode query -C mychannel -n mycc -c '{"Args":["getProperty","property_1"]}'
-func (t *Chaincode) getProperty(stub shim.ChaincodeStubInterface, args []string) pb.Response{
-	var propertyId string
-	var err error
-
-	if len(args) != 1 {
-		return shim.Error("Incorrect number of arguments. Expecting property id to query")
-	}
-
-	propertyId = args[0]
-
-	// Get the state from the ledger
-	propertyBytes, err := stub.GetState(propertyId)
-	if err != nil {
-		return shim.Error(err.Error())
-	}
-
-	if propertyBytes == nil {
-		jsonResp := "{\"Error\":\"Nil amount for " + propertyId + "\"}"
-		return shim.Error(jsonResp)
-	}
-
-	jsonResp := "{\"PropertyId\":\"" + propertyId + "\",\"Property Struct\":\"" + string(propertyBytes) + "\"}"
-	fmt.Printf("Query Response:%s\n", jsonResp)
-
-	return shim.Success(propertyBytes)
 }
 
 func getPropertyAsBytes(property Property) ([]byte, error){
