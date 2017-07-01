@@ -30,9 +30,9 @@ type Chaincode struct {
 }
 
 //TODO
-// - getOwnership(id) Ownership (CurrentState)				*
-// - getOwnershipHistory(id) Ownership (History)			*
-// - getProperty(id) Property (CurrentState)				*
+// - getOwnership(id)							*
+// - getOwnershipHistory(id) 						*
+// - getProperty(id) Property						*
 // - getPropertyHistory(id) 						*
 // - propertyTransaction
 
@@ -189,14 +189,9 @@ func (t *Chaincode) getOwnership(stub shim.ChaincodeStubInterface, args []string
 
 	ownershipId := args[0]
 
-	ownershipBytes, err := stub.GetState(ownershipId)
+	ownershipBytes, err := queryOwnership(stub, ownershipId)
 	if err != nil {
 		return shim.Error(err.Error())
-	}
-
-	if ownershipBytes == nil {
-		jsonResp := "{\"Error\":\"Nil value for " + ownershipId + "\"}"
-		return shim.Error(jsonResp)
 	}
 
 	jsonResp := "{\"OwnershipId\":\"" + ownershipId + "\",\"Ownership Struct\":\"" + string(ownershipBytes) + "\"}"
@@ -282,6 +277,7 @@ func (t *Chaincode) propertyTransaction(stub shim.ChaincodeStubInterface, args [
 	}
 
 	//TODO confirmOwnership
+
 
 	err = confirmValidPercentage(property.Owners)
 	if err != nil {
@@ -382,6 +378,19 @@ func (t *Chaincode) getPropertyHistory(stub shim.ChaincodeStubInterface, args []
 	fmt.Printf("- getHistoryForProperty returning:\n%s\n", buffer.String())
 
 	return shim.Success(buffer.Bytes())
+}
+
+func queryOwnership(stub shim.ChaincodeStubInterface, ownershipId string) ([]byte, error){
+
+	ownershipBytes, err := stub.GetState(ownershipId)
+	if err != nil {
+		err = errors.New("Unable to retrieve ownershipId: " + ownershipId + ". " + err.Error())
+	}
+	if ownershipBytes == nil {
+		err = errors.New("Nil valur for ownershipId: " + ownershipId)
+	}
+
+	return ownershipBytes, err
 }
 
 func getPropertyAsBytes(property Property) ([]byte, error){
