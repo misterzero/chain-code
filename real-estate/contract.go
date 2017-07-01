@@ -29,9 +29,8 @@ type Chaincode struct {
 }
 
 //TODO
-// - make sure errors are all handled (custom responses where needed)
-// - remove comments that are not needed
 // - make layout of methods uniform
+// - fix loop in updateOwnershipProperties
 type Ownership struct {
 	Properties		[]Attribute		`json:"properties"`
 }
@@ -48,11 +47,14 @@ type Attribute struct {
 }
 
 func (t *Chaincode) Init(stub shim.ChaincodeStubInterface) pb.Response {
+
 	//No initialization requirements of chain code required at this time
 	return shim.Success(nil)
+
 }
 
 func (t *Chaincode) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
+
 	fmt.Printf("Invoke")
 	function, args := stub.GetFunctionAndParameters()
 	if function == "createOwnership" {
@@ -69,7 +71,8 @@ func (t *Chaincode) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
 		return t.getPropertyHistory(stub, args)
 	}
 
-	return shim.Error("Invalid invoke function name. Expecting \"delete\" \"createOwnership\"  \"getOwnership\" \"getOwnershipHistory\" \"propertyTransaction\" \"getProperty\" \"getPropertyHistory\"")
+	return shim.Error("Invalid invoke function name. Expecting \"createOwnership\"  \"getOwnership\" \"getOwnershipHistory\" \"propertyTransaction\" \"getProperty\" \"getPropertyHistory\"")
+
 }
 
 //peer chaincode invoke -C mychannel -n mycc -c '{"Args":["createOwnership","ownership_1","{\"properties\":[{\"id\":\"genesis\",\"percentage\":0}]}"]}'
@@ -115,7 +118,7 @@ func (t *Chaincode) getOwnership(stub shim.ChaincodeStubInterface, args []string
 
 	ownershipId := args[0]
 
-	ownershipBytes, err := queryOwnershipInLedger(stub, ownershipId)
+	ownershipBytes, err := getOwnershipFromLedger(stub, ownershipId)
 	if err != nil {
 		return shim.Error(err.Error())
 	}
@@ -146,6 +149,7 @@ func (t *Chaincode) getOwnershipHistory(stub shim.ChaincodeStubInterface, args [
 //peer chaincode invoke -C mychannel -n mycc -c '{"Args":["propertyTransaction","property_1","{\"saleDate\": \"2017-06-28T21:57:16\", \"salePrice\": 1000, \"owners\": [{\"id\":\"ownership_3\",\"percentage\":0.45},{\"id\":\"ownership_2\",\"percentage\":0.55}]}"]}'
 //peer chaincode invoke -C mychannel -n mycc -c '{"Args":["propertyTransaction","property_1","{\"saleDate\": \"2017-06-28T21:57:16\", \"salePrice\": 1000, \"owners\": [{\"id\":\"ownership_1\",\"percentage\":0.32},{\"id\":\"ownership_4\",\"percentage\":0.68}]}"]}'
 func (t *Chaincode) propertyTransaction(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+
 	var propertyId string
 	var propertyString string
 	var err error
@@ -183,16 +187,18 @@ func (t *Chaincode) propertyTransaction(stub shim.ChaincodeStubInterface, args [
 		return shim.Error(err.Error())
 	}
 
-	err = updateOwners(stub, propertyId, propertyOwnership)
+	err = updateOwnershipProperties(stub, propertyId, propertyOwnership)
 	if err != nil {
 		return shim.Error(err.Error())
 	}
 
 	return shim.Success(nil)
+
 }
 
 //peer chaincode query -C mychannel -n mycc -c '{"Args":["getProperty","property_1"]}'
 func (t *Chaincode) getProperty(stub shim.ChaincodeStubInterface, args []string) pb.Response{
+
 	var propertyId string
 	var err error
 
@@ -202,7 +208,6 @@ func (t *Chaincode) getProperty(stub shim.ChaincodeStubInterface, args []string)
 
 	propertyId = args[0]
 
-	// Get the state from the ledger
 	propertyBytes, err := stub.GetState(propertyId)
 	if err != nil {
 		return shim.Error(err.Error())
@@ -217,6 +222,7 @@ func (t *Chaincode) getProperty(stub shim.ChaincodeStubInterface, args []string)
 	fmt.Printf("Query Response:%s\n", jsonResp)
 
 	return shim.Success(propertyBytes)
+
 }
 
 //peer chaincode query -C mychannel -n mycc -c '{"Args":["getPropertyHistory","property_1"]}'
@@ -235,7 +241,7 @@ func (t *Chaincode) getPropertyHistory(stub shim.ChaincodeStubInterface, args []
 
 }
 
-func queryOwnershipInLedger(stub shim.ChaincodeStubInterface, ownershipId string) ([]byte, error){
+func getOwnershipFromLedger(stub shim.ChaincodeStubInterface, ownershipId string) ([]byte, error){
 
 	ownershipBytes, err := stub.GetState(ownershipId)
 	if err != nil {
@@ -248,15 +254,36 @@ func queryOwnershipInLedger(stub shim.ChaincodeStubInterface, ownershipId string
 	return ownershipBytes, err
 }
 
-func updateOwners(stub shim.ChaincodeStubInterface, propertyId string, propertyOwnership map[string][]interface{}) (error){
+func getOwnershipPropertyUpdateRequirements(stub shim.ChaincodeStubInterface, propertyOwners[]Attribute) (map[string][]interface{}, error){
+
+	var ownerAndPercentageData = make(map[string][]interface{})
+	var err error
+
+	for i := 0; i < len(propertyOwners); i++ {
+		propertyOwnersBytes, err := getOwnershipFromLedger(stub, propertyOwners[i].Id)
+		if err != nil {
+			err = errors.New("Unable to find ownershipId: " + propertyOwners[i].Id + "| " + err.Error())
+			return ownerAndPercentageData, err
+		}
+
+		var ownerBytesAndPercentage []interface{} = []interface{}{propertyOwnersBytes, propertyOwners[i].Percentage}
+		ownerAndPercentageData[propertyOwners[i].Id] = ownerBytesAndPercentage
+
+	}
+
+	return ownerAndPercentageData, err
+
+}
+
+func updateOwnershipProperties(stub shim.ChaincodeStubInterface, propertyId string, propertyOwnership map[string][]interface{}) (error){
 
 	var err error
 
-	for k, v := range propertyOwnership {
-		fmt.Println(v)
+	for k, _ := range propertyOwnership {
 		ownership := Ownership{}
 		err = json.Unmarshal(propertyOwnership[k][0].([]byte), &ownership)
 		if err != nil {
+			err = errors.New("Unable to convert byte array to ownership struct,  " + string(propertyOwnership[k][0].([]byte)))
 			return err
 		}
 
@@ -273,33 +300,13 @@ func updateOwners(stub shim.ChaincodeStubInterface, propertyId string, propertyO
 
 		err = stub.PutState(k, ownershipAsBytes)
 		if err != nil {
+			err = errors.New("Unable to add Ownerhsip to Ledger,  " + string(ownershipAsBytes))
 			return err
 		}
 
 	}
 
 	return err
-
-}
-
-func getOwnershipPropertyUpdateRequirements(stub shim.ChaincodeStubInterface, propertyOwners[]Attribute) (map[string][]interface{}, error){
-
-	var ownerAndPercentageData = make(map[string][]interface{})
-	var err error
-
-	for i := 0; i < len(propertyOwners); i++ {
-		propertyOwnersBytes, err := queryOwnershipInLedger(stub, propertyOwners[i].Id)
-		if err != nil {
-			err = errors.New("Unable to find ownershipId: " + propertyOwners[i].Id + "| " + err.Error())
-			return ownerAndPercentageData, err
-		}
-
-		var ownerBytesAndPercentage []interface{} = []interface{}{propertyOwnersBytes, propertyOwners[i].Percentage}
-		ownerAndPercentageData[propertyOwners[i].Id] = ownerBytesAndPercentage
-
-	}
-
-	return ownerAndPercentageData, err
 
 }
 
@@ -310,7 +317,7 @@ func getPropertyAsBytes(property Property) ([]byte, error){
 
 	propertyBytes, err = json.Marshal(property)
 	if err != nil{
-		err = errors.New("Unable to convert property to json string")
+		err = errors.New("Unable to convert property to json string " + string(propertyBytes))
 	}
 
 	return propertyBytes, err
@@ -324,7 +331,7 @@ func getOwnershipAsBytes(ownership Ownership) ([]byte, error){
 
 	ownershipBytes, err = json.Marshal(ownership)
 	if err != nil{
-		err = errors.New("Unable to convert ownership to json string")
+		err = errors.New("Unable to convert ownership to json string " + string(ownershipBytes))
 	}
 
 	return ownershipBytes, err
@@ -336,6 +343,7 @@ func getHistory(stub shim.ChaincodeStubInterface, id string, historyType string)
 	var empty []byte
 	resultsIterator, err := stub.GetHistoryForKey(id)
 	if err != nil {
+		err = errors.New("Unabke to get history for key: " + id + err.Error())
 		return empty, err
 	}
 	defer resultsIterator.Close()
@@ -381,6 +389,7 @@ func getHistory(stub shim.ChaincodeStubInterface, id string, historyType string)
 	buffer.WriteString("]")
 
 	return buffer.Bytes(), err
+
 }
 
 func confirmValidPercentage(buyers []Attribute) error{
@@ -394,7 +403,7 @@ func confirmValidPercentage(buyers []Attribute) error{
 
 	if totalPercentage != 1 {
 		totalPercentageString := fmt.Sprint(totalPercentage)
-		err = errors.New("Total Percentage is not correct: " + totalPercentageString)
+		err = errors.New("Total Percentage can not be greater than or less than 1. Your total percentage =" + totalPercentageString)
 	}
 
 	return err
