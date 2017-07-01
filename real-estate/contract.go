@@ -20,7 +20,6 @@ import (
 	"fmt"
 	"bytes"
 	"errors"
-	"strconv"
 	"encoding/json"
 	"github.com/hyperledger/fabric/core/chaincode/shim"
 	pb "github.com/hyperledger/fabric/protos/peer"
@@ -33,8 +32,6 @@ type Chaincode struct {
 // - make sure errors are all handled (custom responses where needed)
 // - remove comments that are not needed
 // - make layout of methods uniform
-// - create constants for "ownership_#" id's and "property_#" id's
-// - how will rollbacks work within a propertyTransaction
 type Ownership struct {
 	Properties		[]Attribute		`json:"properties"`
 }
@@ -75,33 +72,6 @@ func (t *Chaincode) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
 	return shim.Error("Invalid invoke function name. Expecting \"delete\" \"createOwnership\"  \"getOwnership\" \"getOwnershipHistory\" \"propertyTransaction\" \"getProperty\" \"getPropertyHistory\"")
 }
 
-//====================================================================================================================
-func createAttributeFromArgs(args []string) (*Attribute, error){
-
-	var attribute Attribute
-	var id string
-	var percentage float64
-	var err error
-
-	if len(args) != 2 {
-		err = errors.New("expected args length of 2, but received " + string(len(args)))
-	}
-
-	id = args[0]
-
-	percentage, err = strconv.ParseFloat(args[1], 64)
-	if err != nil {
-		err = errors.New("unable to parse " + string(args[1]) + " as float")
-	}
-
-	attribute.Id = id
-	attribute.Percentage = percentage
-
-	return &attribute, err
-
-}
-
-//====================================================================================================================
 //peer chaincode invoke -C mychannel -n mycc -c '{"Args":["createOwnership","ownership_1","{\"properties\":[{\"id\":\"genesis\",\"percentage\":0}]}"]}'
 //peer chaincode invoke -C mychannel -n mycc -c '{"Args":["createOwnership","ownership_1","{\"properties\":[]}"]}'
 func (t *Chaincode) createOwnership(stub shim.ChaincodeStubInterface, args []string) pb.Response {
@@ -115,8 +85,8 @@ func (t *Chaincode) createOwnership(stub shim.ChaincodeStubInterface, args []str
 
 	ownershipId = args[0]
 	ownershipString := args[1]
-	ownership := Ownership{}
 
+	ownership := Ownership{}
 	err = json.Unmarshal([]byte(ownershipString), &ownership)
 	if err != nil {
 		return shim.Error(err.Error())
@@ -154,6 +124,7 @@ func (t *Chaincode) getOwnership(stub shim.ChaincodeStubInterface, args []string
 	fmt.Printf("Query Response:%s\n", jsonResp)
 
 	return shim.Success(ownershipBytes)
+
 }
 
 //peer chaincode query -C mychannel -n mycc -c '{"Args":["getOwnershipHistory","ownership_1"]}'
@@ -163,51 +134,13 @@ func (t *Chaincode) getOwnershipHistory(stub shim.ChaincodeStubInterface, args [
 		return shim.Error("Incorrect number of arguments. Expecting 1")
 	}
 
-	ownershipId := args[0]
-
-	resultsIterator, err := stub.GetHistoryForKey(ownershipId)
+	buffer, err := getHistory(stub, args[0], "ownership")
 	if err != nil {
 		return shim.Error(err.Error())
 	}
-	defer resultsIterator.Close()
 
-	// buffer is a JSON array containing historic values for the marble
-	var buffer bytes.Buffer
-	buffer.WriteString("[")
+	return shim.Success(buffer)
 
-	bArrayMemberAlreadyWritten := false
-	for resultsIterator.HasNext() {
-		response, err := resultsIterator.Next()
-		if err != nil {
-			return shim.Error(err.Error())
-		}
-		// Add a comma before array members, suppress it for the first array member
-		if bArrayMemberAlreadyWritten == true {
-			buffer.WriteString(",")
-		}
-		buffer.WriteString("{\"TxId\":")
-		buffer.WriteString("\"")
-		buffer.WriteString(response.TxId)
-		buffer.WriteString("\"")
-
-		buffer.WriteString(", \"Ownership\":")
-		// if it was a delete operation on given key, then we need to set the
-		//corresponding value null. Else, we will write the response.Value
-		//as-is (as the Value itself a JSON property)
-		if response.IsDelete {
-			buffer.WriteString("null")
-		} else {
-			buffer.WriteString(string(response.Value))
-		}
-
-		buffer.WriteString("}")
-		bArrayMemberAlreadyWritten = true
-	}
-	buffer.WriteString("]")
-
-	fmt.Printf("- getHistoryForProperty returning:\n%s\n", buffer.String())
-
-	return shim.Success(buffer.Bytes())
 }
 
 //peer chaincode invoke -C mychannel -n mycc -c '{"Args":["propertyTransaction","property_1","{\"saleDate\": \"2017-06-28T21:57:16\", \"salePrice\": 1000, \"owners\": [{\"id\":\"ownership_3\",\"percentage\":0.45},{\"id\":\"ownership_2\",\"percentage\":0.55}]}"]}'
@@ -321,51 +254,13 @@ func (t *Chaincode) getPropertyHistory(stub shim.ChaincodeStubInterface, args []
 		return shim.Error("Incorrect number of arguments. Expecting 1")
 	}
 
-	propertyId := args[0]
-
-	resultsIterator, err := stub.GetHistoryForKey(propertyId)
+	buffer, err := getHistory(stub, args[0], "property")
 	if err != nil {
 		return shim.Error(err.Error())
 	}
-	defer resultsIterator.Close()
 
-	// buffer is a JSON array containing historic values for the marble
-	var buffer bytes.Buffer
-	buffer.WriteString("[")
+	return shim.Success(buffer)
 
-	bArrayMemberAlreadyWritten := false
-	for resultsIterator.HasNext() {
-		response, err := resultsIterator.Next()
-		if err != nil {
-			return shim.Error(err.Error())
-		}
-		// Add a comma before array members, suppress it for the first array member
-		if bArrayMemberAlreadyWritten == true {
-			buffer.WriteString(",")
-		}
-		buffer.WriteString("{\"TxId\":")
-		buffer.WriteString("\"")
-		buffer.WriteString(response.TxId)
-		buffer.WriteString("\"")
-
-		buffer.WriteString(", \"Property\":")
-		// if it was a delete operation on given key, then we need to set the
-		//corresponding value null. Else, we will write the response.Value
-		//as-is (as the Value itself a JSON property)
-		if response.IsDelete {
-			buffer.WriteString("null")
-		} else {
-			buffer.WriteString(string(response.Value))
-		}
-
-		buffer.WriteString("}")
-		bArrayMemberAlreadyWritten = true
-	}
-	buffer.WriteString("]")
-
-	fmt.Printf("- getHistoryForProperty returning:\n%s\n", buffer.String())
-
-	return shim.Success(buffer.Bytes())
 }
 
 func queryOwnershipInLedger(stub shim.ChaincodeStubInterface, ownershipId string) ([]byte, error){
@@ -379,20 +274,6 @@ func queryOwnershipInLedger(stub shim.ChaincodeStubInterface, ownershipId string
 	}
 
 	return ownershipBytes, err
-}
-
-func getAttributeListAsBytes(attribute []Attribute) ([]byte, error){
-
-	var attributeBytes []byte
-	var err error
-
-	attributeBytes, err = json.Marshal(attribute)
-	if err != nil{
-		err = errors.New("Unable to convert list of attributes to json string")
-	}
-
-	return attributeBytes, err
-
 }
 
 func getAttributeAsBytes(attribute Attribute) ([]byte, error){
@@ -435,6 +316,58 @@ func getOwnershipAsBytes(ownership Ownership) ([]byte, error){
 
 	return ownershipBytes, err
 
+}
+
+func getHistory(stub shim.ChaincodeStubInterface, id string, historyType string) ([]byte, error){
+
+	var empty []byte
+	resultsIterator, err := stub.GetHistoryForKey(id)
+	if err != nil {
+		return empty, err
+	}
+	defer resultsIterator.Close()
+
+	var buffer bytes.Buffer
+	var historyMessage string
+	buffer.WriteString("[")
+
+	bArrayMemberAlreadyWritten := false
+	for resultsIterator.HasNext() {
+		response, err := resultsIterator.Next()
+		if err != nil {
+			return empty, err
+		}
+		// Add a comma before array members, suppress it for the first array member
+		if bArrayMemberAlreadyWritten == true {
+			buffer.WriteString(",")
+		}
+		buffer.WriteString("{\"TxId\":")
+		buffer.WriteString("\"")
+		buffer.WriteString(response.TxId)
+		buffer.WriteString("\"")
+
+		if historyType == "ownership"{
+			historyMessage = ", \"Ownership\":"
+		} else if historyType == "property" {
+			historyMessage = ", \"Property\":"
+		}
+
+		buffer.WriteString(historyMessage)
+		// if it was a delete operation on given key, then we need to set the
+		//corresponding value null. Else, we will write the response.Value
+		//as-is (as the Value itself a JSON property)
+		if response.IsDelete {
+			buffer.WriteString("null")
+		} else {
+			buffer.WriteString(string(response.Value))
+		}
+
+		buffer.WriteString("}")
+		bArrayMemberAlreadyWritten = true
+	}
+	buffer.WriteString("]")
+
+	return buffer.Bytes(), err
 }
 
 func confirmValidPercentage(buyers []Attribute) error{
