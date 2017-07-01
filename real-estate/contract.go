@@ -30,12 +30,8 @@ type Chaincode struct {
 }
 
 //TODO
-// - propertyTransaction
-
-//TODO
 // - make sure errors are all handled (custom responses where needed)
 // - handle check for verifying ownership exists prior to processing transaction
-// - update ownership after transaction goes through
 // - remove comments that are not needed
 // - update error message for Invoke
 // - make layout of methods uniform
@@ -249,25 +245,24 @@ func (t *Chaincode) propertyTransaction(stub shim.ChaincodeStubInterface, args [
 
 	propertyId = args[0]
 	propertyString = args[1]
-	fmt.Printf("PropertyId = %d", propertyId)
 
 	property := Property{}
-
 	err = json.Unmarshal([]byte(propertyString), &property)
 	if err != nil {
 		return shim.Error(err.Error())
 	}
 
-	//TODO need to know all owners and their percentages
-	propertyOwners := map[string][]byte{}
+	propertyOwnership := map[string][]byte{}
+	propertyOwnershipPercentage := map[string]float64{}
 
 	for i := 0; i < len(property.Owners); i++ {
-		currentOwnershipBytes, err := queryOwnershipInLedger(stub, property.Owners[i].Id)
+		propertyOwnersBytes, err := queryOwnershipInLedger(stub, property.Owners[i].Id)
 		if err != nil {
-			return shim.Error("Unable to find ownershipId: " + property.Owners[i].Id + ". " + err.Error())
+			return shim.Error("Unable to find ownershipId: " + property.Owners[i].Id + "| " + err.Error())
 		}
 
-		propertyOwners[property.Owners[i].Id] = currentOwnershipBytes
+		propertyOwnership[property.Owners[i].Id] = propertyOwnersBytes
+		propertyOwnershipPercentage[property.Owners[i].Id] = property.Owners[i].Percentage
 	}
 
 	err = confirmValidPercentage(property.Owners)
@@ -275,7 +270,6 @@ func (t *Chaincode) propertyTransaction(stub shim.ChaincodeStubInterface, args [
 		return shim.Error(err.Error())
 	}
 
-	// Write the state to the ledger
 	propertyAsBytes, err := getPropertyAsBytes(property)
 	if err != nil {
 		return shim.Error(err.Error())
@@ -286,24 +280,16 @@ func (t *Chaincode) propertyTransaction(stub shim.ChaincodeStubInterface, args [
 		return shim.Error(err.Error())
 	}
 
-	//TODO add properties to ownership properties list
-	for k, v := range propertyOwners {
-		propertyOwnerAttribute := Attribute{}
-		err = json.Unmarshal(v, &propertyOwnerAttribute)
-		if err != nil {
-			return shim.Error(err.Error())
-		}
-
+	for k, v := range propertyOwnership {
 		ownership := Ownership{}
-		ownershipBytes, err := stub.GetState(k)
-		err = json.Unmarshal(ownershipBytes, &ownership)
+		err = json.Unmarshal(v, &ownership)
 		if err != nil {
 			return shim.Error(err.Error())
 		}
 
 		ownershipPropertyAttribute := Attribute{}
 		ownershipPropertyAttribute.Id = propertyId
-		ownershipPropertyAttribute.Percentage = propertyOwnerAttribute.Percentage
+		ownershipPropertyAttribute.Percentage = propertyOwnershipPercentage[k]
 
 		ownership.Properties = append(ownership.Properties, ownershipPropertyAttribute)
 
@@ -318,8 +304,6 @@ func (t *Chaincode) propertyTransaction(stub shim.ChaincodeStubInterface, args [
 		}
 
 	}
-
-	//TODO figure out how and where to do rollbacks
 
 	return shim.Success(nil)
 }
