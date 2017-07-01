@@ -30,10 +30,6 @@ type Chaincode struct {
 }
 
 //TODO
-// - getOwnership(id)							*
-// - getOwnershipHistory(id) 						*
-// - getProperty(id) Property						*
-// - getPropertyHistory(id) 						*
 // - propertyTransaction
 
 //TODO
@@ -42,8 +38,12 @@ type Chaincode struct {
 // - update ownership after transaction goes through
 // - remove comments that are not needed
 // - update error message for Invoke
+// - make layout of methods uniform
+// - when setting up delete functionality, we need to be able to delete both property transactions as well as users
+// - create constants for "ownership_#" id's and "property_#" id's
+// - how will rollbacks work within a propertyTransaction
 type Ownership struct {
-	Properties	[]Attribute			`json:"properties"`
+	Properties		[]Attribute		`json:"properties"`
 }
 
 type Property struct {
@@ -53,8 +53,8 @@ type Property struct {
 }
 
 type Attribute struct {
-	Id			string		`json:"id"`
-	Percentage 		float64		`json:"percentage"`
+	Id			string			`json:"id"`
+	Percentage 		float64			`json:"percentage"`
 }
 
 func (t *Chaincode) Init(stub shim.ChaincodeStubInterface) pb.Response {
@@ -66,19 +66,14 @@ func (t *Chaincode) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
 	fmt.Printf("Invoke")
 	function, args := stub.GetFunctionAndParameters()
 	if function == "delete" {
-		// Deletes an entity from its state
 		return t.delete(stub, args)
 	} else if function == "createOwnership" {
-		// the old "Query" is now implemtned in invoke
 		return t.createOwnership(stub, args)
 	} else if function == "getOwnership" {
-		// the old "Query" is now implemtned in invoke
 		return t.getOwnership(stub, args)
 	} else if function == "getOwnershipHistory" {
-		// the old "Query" is now implemtned in invoke
 		return t.getOwnershipHistory(stub, args)
 	}else if function == "getProperty" {
-		// the old "Query" is now implemtned in invoke
 		return t.getProperty(stub, args)
 	} else if  function == "propertyTransaction" {
 		return t.propertyTransaction(stub, args)
@@ -132,19 +127,6 @@ func createAttributeFromArgs(args []string) (*Attribute, error){
 
 }
 
-func getAttributeListAsBytes(attribute []Attribute) ([]byte, error){
-
-	var attributeBytes []byte
-	var err error
-
-	attributeBytes, err = json.Marshal(attribute)
-	if err != nil{
-		err = errors.New("Unable to convert list of attributes to json string")
-	}
-
-	return attributeBytes, err
-
-}
 //====================================================================================================================
 //peer chaincode invoke -C mychannel -n mycc -c '{"Args":["createOwnership","ownership_1","{\"properties\":[{\"id\":\"genesis\",\"percentage\":0}]}"]}'
 //peer chaincode invoke -C mychannel -n mycc -c '{"Args":["createOwnership","ownership_1","{\"properties\":[]}"]}'
@@ -189,7 +171,7 @@ func (t *Chaincode) getOwnership(stub shim.ChaincodeStubInterface, args []string
 
 	ownershipId := args[0]
 
-	ownershipBytes, err := queryOwnership(stub, ownershipId)
+	ownershipBytes, err := queryOwnershipInLedger(stub, ownershipId)
 	if err != nil {
 		return shim.Error(err.Error())
 	}
@@ -254,8 +236,8 @@ func (t *Chaincode) getOwnershipHistory(stub shim.ChaincodeStubInterface, args [
 	return shim.Success(buffer.Bytes())
 }
 
-//peer chaincode invoke -C mychannel -n mycc -c '{"Args":["propertyTransaction","property_1","{\"saleDate\": \"2017-06-28T21:57:16\", \"salePrice\": 1000, \"owners\": [{\"id\":\"owner_3\",\"percentage\":0.45},{\"id\":\"owner_2\",\"percentage\":0.55}]}"]}'
-//peer chaincode invoke -C mychannel -n mycc -c '{"Args":["propertyTransaction","property_1","{\"saleDate\": \"2017-06-28T21:57:16\", \"salePrice\": 1000, \"owners\": [{\"id\":\"owner_1\",\"percentage\":0.32},{\"id\":\"owner_4\",\"percentage\":0.68}]}"]}'
+//peer chaincode invoke -C mychannel -n mycc -c '{"Args":["propertyTransaction","property_1","{\"saleDate\": \"2017-06-28T21:57:16\", \"salePrice\": 1000, \"owners\": [{\"id\":\"ownership_3\",\"percentage\":0.45},{\"id\":\"ownership_2\",\"percentage\":0.55}]}"]}'
+//peer chaincode invoke -C mychannel -n mycc -c '{"Args":["propertyTransaction","property_1","{\"saleDate\": \"2017-06-28T21:57:16\", \"salePrice\": 1000, \"owners\": [{\"id\":\"ownership_1\",\"percentage\":0.32},{\"id\":\"ownership_4\",\"percentage\":0.68}]}"]}'
 func (t *Chaincode) propertyTransaction(stub shim.ChaincodeStubInterface, args []string) pb.Response {
 	var propertyId string
 	var propertyString string
@@ -276,8 +258,17 @@ func (t *Chaincode) propertyTransaction(stub shim.ChaincodeStubInterface, args [
 		return shim.Error(err.Error())
 	}
 
-	//TODO confirmOwnership
+	//TODO need to know all owners and their percentages
+	propertyOwners := map[string][]byte{}
 
+	for i := 0; i < len(property.Owners); i++ {
+		currentOwnershipBytes, err := queryOwnershipInLedger(stub, property.Owners[i].Id)
+		if err != nil {
+			return shim.Error("Unable to find ownershipId: " + property.Owners[i].Id + ". " + err.Error())
+		}
+
+		propertyOwners[property.Owners[i].Id] = currentOwnershipBytes
+	}
 
 	err = confirmValidPercentage(property.Owners)
 	if err != nil {
@@ -294,6 +285,41 @@ func (t *Chaincode) propertyTransaction(stub shim.ChaincodeStubInterface, args [
 	if err != nil {
 		return shim.Error(err.Error())
 	}
+
+	//TODO add properties to ownership properties list
+	for k, v := range propertyOwners {
+		propertyOwnerAttribute := Attribute{}
+		err = json.Unmarshal(v, &propertyOwnerAttribute)
+		if err != nil {
+			return shim.Error(err.Error())
+		}
+
+		ownership := Ownership{}
+		ownershipBytes, err := stub.GetState(k)
+		err = json.Unmarshal(ownershipBytes, &ownership)
+		if err != nil {
+			return shim.Error(err.Error())
+		}
+
+		ownershipPropertyAttribute := Attribute{}
+		ownershipPropertyAttribute.Id = propertyId
+		ownershipPropertyAttribute.Percentage = propertyOwnerAttribute.Percentage
+
+		ownership.Properties = append(ownership.Properties, ownershipPropertyAttribute)
+
+		ownershipAsBytes, err := getOwnershipAsBytes(ownership)
+		if err != nil {
+			return shim.Error(err.Error())
+		}
+
+		err = stub.PutState(k, ownershipAsBytes)
+		if err != nil {
+			return shim.Error(err.Error())
+		}
+
+	}
+
+	//TODO figure out how and where to do rollbacks
 
 	return shim.Success(nil)
 }
@@ -380,17 +406,45 @@ func (t *Chaincode) getPropertyHistory(stub shim.ChaincodeStubInterface, args []
 	return shim.Success(buffer.Bytes())
 }
 
-func queryOwnership(stub shim.ChaincodeStubInterface, ownershipId string) ([]byte, error){
+func queryOwnershipInLedger(stub shim.ChaincodeStubInterface, ownershipId string) ([]byte, error){
 
 	ownershipBytes, err := stub.GetState(ownershipId)
 	if err != nil {
 		err = errors.New("Unable to retrieve ownershipId: " + ownershipId + ". " + err.Error())
 	}
 	if ownershipBytes == nil {
-		err = errors.New("Nil valur for ownershipId: " + ownershipId)
+		err = errors.New("Nil value for ownershipId: " + ownershipId)
 	}
 
 	return ownershipBytes, err
+}
+
+func getAttributeListAsBytes(attribute []Attribute) ([]byte, error){
+
+	var attributeBytes []byte
+	var err error
+
+	attributeBytes, err = json.Marshal(attribute)
+	if err != nil{
+		err = errors.New("Unable to convert list of attributes to json string")
+	}
+
+	return attributeBytes, err
+
+}
+
+func getAttributeAsBytes(attribute Attribute) ([]byte, error){
+
+	var attributeBytes []byte
+	var err error
+
+	attributeBytes, err = json.Marshal(attribute)
+	if err != nil{
+		err = errors.New("Unable to convert list of attributes to json string")
+	}
+
+	return attributeBytes, err
+
 }
 
 func getPropertyAsBytes(property Property) ([]byte, error){
@@ -422,6 +476,7 @@ func getOwnershipAsBytes(ownership Ownership) ([]byte, error){
 }
 
 func confirmValidPercentage(buyers []Attribute) error{
+
 	var totalPercentage float64
 	var err error
 
@@ -435,6 +490,7 @@ func confirmValidPercentage(buyers []Attribute) error{
 	}
 
 	return err
+
 }
 
 func main() {
