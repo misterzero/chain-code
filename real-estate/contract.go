@@ -183,54 +183,12 @@ func (t *Chaincode) propertyTransaction(stub shim.ChaincodeStubInterface, args [
 		return shim.Error(err.Error())
 	}
 
-	for k, v := range propertyOwnership {
-		fmt.Println(v)
-		ownership := Ownership{}
-		err = json.Unmarshal(propertyOwnership[k][0].([]byte), &ownership)
-		if err != nil {
-			return shim.Error(err.Error())
-		}
-
-		ownershipPropertyAttribute := Attribute{}
-		ownershipPropertyAttribute.Id = propertyId
-		ownershipPropertyAttribute.Percentage = propertyOwnership[k][1].(float64)
-
-		ownership.Properties = append(ownership.Properties, ownershipPropertyAttribute)
-
-		ownershipAsBytes, err := getOwnershipAsBytes(ownership)
-		if err != nil {
-			return shim.Error(err.Error())
-		}
-
-		err = stub.PutState(k, ownershipAsBytes)
-		if err != nil {
-			return shim.Error(err.Error())
-		}
-
+	err = updateOwners(stub, propertyId, propertyOwnership)
+	if err != nil {
+		return shim.Error(err.Error())
 	}
 
 	return shim.Success(nil)
-}
-
-func getOwnershipPropertyUpdateRequirements(stub shim.ChaincodeStubInterface, propertyOwners[]Attribute) (map[string][]interface{}, error){
-
-	var ownerAndPercentageData = make(map[string][]interface{})
-	var err error
-
-	for i := 0; i < len(propertyOwners); i++ {
-		propertyOwnersBytes, err := queryOwnershipInLedger(stub, propertyOwners[i].Id)
-		if err != nil {
-			err = errors.New("Unable to find ownershipId: " + propertyOwners[i].Id + "| " + err.Error())
-			return ownerAndPercentageData, err
-		}
-
-		var ownerBytesAndPercentage []interface{} = []interface{}{propertyOwnersBytes, propertyOwners[i].Percentage}
-		ownerAndPercentageData[propertyOwners[i].Id] = ownerBytesAndPercentage
-
-	}
-
-	return ownerAndPercentageData, err
-
 }
 
 //peer chaincode query -C mychannel -n mycc -c '{"Args":["getProperty","property_1"]}'
@@ -290,17 +248,58 @@ func queryOwnershipInLedger(stub shim.ChaincodeStubInterface, ownershipId string
 	return ownershipBytes, err
 }
 
-func getAttributeAsBytes(attribute Attribute) ([]byte, error){
+func updateOwners(stub shim.ChaincodeStubInterface, propertyId string, propertyOwnership map[string][]interface{}) (error){
 
-	var attributeBytes []byte
 	var err error
 
-	attributeBytes, err = json.Marshal(attribute)
-	if err != nil{
-		err = errors.New("Unable to convert list of attributes to json string")
+	for k, v := range propertyOwnership {
+		fmt.Println(v)
+		ownership := Ownership{}
+		err = json.Unmarshal(propertyOwnership[k][0].([]byte), &ownership)
+		if err != nil {
+			return err
+		}
+
+		ownershipPropertyAttribute := Attribute{}
+		ownershipPropertyAttribute.Id = propertyId
+		ownershipPropertyAttribute.Percentage = propertyOwnership[k][1].(float64)
+
+		ownership.Properties = append(ownership.Properties, ownershipPropertyAttribute)
+
+		ownershipAsBytes, err := getOwnershipAsBytes(ownership)
+		if err != nil {
+			return err
+		}
+
+		err = stub.PutState(k, ownershipAsBytes)
+		if err != nil {
+			return err
+		}
+
 	}
 
-	return attributeBytes, err
+	return err
+
+}
+
+func getOwnershipPropertyUpdateRequirements(stub shim.ChaincodeStubInterface, propertyOwners[]Attribute) (map[string][]interface{}, error){
+
+	var ownerAndPercentageData = make(map[string][]interface{})
+	var err error
+
+	for i := 0; i < len(propertyOwners); i++ {
+		propertyOwnersBytes, err := queryOwnershipInLedger(stub, propertyOwners[i].Id)
+		if err != nil {
+			err = errors.New("Unable to find ownershipId: " + propertyOwners[i].Id + "| " + err.Error())
+			return ownerAndPercentageData, err
+		}
+
+		var ownerBytesAndPercentage []interface{} = []interface{}{propertyOwnersBytes, propertyOwners[i].Percentage}
+		ownerAndPercentageData[propertyOwners[i].Id] = ownerBytesAndPercentage
+
+	}
+
+	return ownerAndPercentageData, err
 
 }
 
