@@ -163,17 +163,9 @@ func (t *Chaincode) propertyTransaction(stub shim.ChaincodeStubInterface, args [
 		return shim.Error(err.Error())
 	}
 
-	propertyOwnership := map[string][]byte{}
-	propertyOwnershipPercentage := map[string]float64{}
-
-	for i := 0; i < len(property.Owners); i++ {
-		propertyOwnersBytes, err := queryOwnershipInLedger(stub, property.Owners[i].Id)
-		if err != nil {
-			return shim.Error("Unable to find ownershipId: " + property.Owners[i].Id + "| " + err.Error())
-		}
-
-		propertyOwnership[property.Owners[i].Id] = propertyOwnersBytes
-		propertyOwnershipPercentage[property.Owners[i].Id] = property.Owners[i].Percentage
+	propertyOwnership, err := getOwnershipPropertyUpdateRequirements(stub, property.Owners)
+	if err != nil {
+		return shim.Error(err.Error())
 	}
 
 	err = confirmValidPercentage(property.Owners)
@@ -192,15 +184,16 @@ func (t *Chaincode) propertyTransaction(stub shim.ChaincodeStubInterface, args [
 	}
 
 	for k, v := range propertyOwnership {
+		fmt.Println(v)
 		ownership := Ownership{}
-		err = json.Unmarshal(v, &ownership)
+		err = json.Unmarshal(propertyOwnership[k][0].([]byte), &ownership)
 		if err != nil {
 			return shim.Error(err.Error())
 		}
 
 		ownershipPropertyAttribute := Attribute{}
 		ownershipPropertyAttribute.Id = propertyId
-		ownershipPropertyAttribute.Percentage = propertyOwnershipPercentage[k]
+		ownershipPropertyAttribute.Percentage = propertyOwnership[k][1].(float64)
 
 		ownership.Properties = append(ownership.Properties, ownershipPropertyAttribute)
 
@@ -217,6 +210,27 @@ func (t *Chaincode) propertyTransaction(stub shim.ChaincodeStubInterface, args [
 	}
 
 	return shim.Success(nil)
+}
+
+func getOwnershipPropertyUpdateRequirements(stub shim.ChaincodeStubInterface, propertyOwners[]Attribute) (map[string][]interface{}, error){
+
+	var ownerAndPercentageData = make(map[string][]interface{})
+	var err error
+
+	for i := 0; i < len(propertyOwners); i++ {
+		propertyOwnersBytes, err := queryOwnershipInLedger(stub, propertyOwners[i].Id)
+		if err != nil {
+			err = errors.New("Unable to find ownershipId: " + propertyOwners[i].Id + "| " + err.Error())
+			return ownerAndPercentageData, err
+		}
+
+		var ownerBytesAndPercentage []interface{} = []interface{}{propertyOwnersBytes, propertyOwners[i].Percentage}
+		ownerAndPercentageData[propertyOwners[i].Id] = ownerBytesAndPercentage
+
+	}
+
+	return ownerAndPercentageData, err
+
 }
 
 //peer chaincode query -C mychannel -n mycc -c '{"Args":["getProperty","property_1"]}'
