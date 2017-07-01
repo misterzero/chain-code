@@ -33,7 +33,6 @@ type Chaincode struct {
 // - make sure errors are all handled (custom responses where needed)
 // - remove comments that are not needed
 // - make layout of methods uniform
-// - when setting up delete functionality, we need to be able to delete both property transactions as well as users
 // - create constants for "ownership_#" id's and "property_#" id's
 // - how will rollbacks work within a propertyTransaction
 type Ownership struct {
@@ -59,9 +58,7 @@ func (t *Chaincode) Init(stub shim.ChaincodeStubInterface) pb.Response {
 func (t *Chaincode) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
 	fmt.Printf("Invoke")
 	function, args := stub.GetFunctionAndParameters()
-	if function == "delete" {
-		return t.delete(stub, args)
-	} else if function == "createOwnership" {
+	if function == "createOwnership" {
 		return t.createOwnership(stub, args)
 	} else if function == "getOwnership" {
 		return t.getOwnership(stub, args)
@@ -79,23 +76,6 @@ func (t *Chaincode) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
 }
 
 //====================================================================================================================
-// Deletes an entity from state
-func (t *Chaincode) delete(stub shim.ChaincodeStubInterface, args []string) pb.Response {
-	if len(args) != 1 {
-		return shim.Error("Incorrect number of arguments. Expecting 1")
-	}
-
-	A := args[0]
-
-	// Delete the key from the state in ledger
-	err := stub.DelState(A)
-	if err != nil {
-		return shim.Error("Failed to delete state")
-	}
-
-	return shim.Success(nil)
-}
-
 func createAttributeFromArgs(args []string) (*Attribute, error){
 
 	var attribute Attribute
