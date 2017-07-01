@@ -31,9 +31,7 @@ type Chaincode struct {
 
 //TODO
 // - make sure errors are all handled (custom responses where needed)
-// - handle check for verifying ownership exists prior to processing transaction
 // - remove comments that are not needed
-// - update error message for Invoke
 // - make layout of methods uniform
 // - when setting up delete functionality, we need to be able to delete both property transactions as well as users
 // - create constants for "ownership_#" id's and "property_#" id's
@@ -69,15 +67,15 @@ func (t *Chaincode) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
 		return t.getOwnership(stub, args)
 	} else if function == "getOwnershipHistory" {
 		return t.getOwnershipHistory(stub, args)
-	}else if function == "getProperty" {
-		return t.getProperty(stub, args)
 	} else if  function == "propertyTransaction" {
 		return t.propertyTransaction(stub, args)
-	} else if function == "getPropertyHistory" {
+	} else if function == "getProperty" {
+		return t.getProperty(stub, args)
+	}else if function == "getPropertyHistory" {
 		return t.getPropertyHistory(stub, args)
 	}
 
-	return shim.Error("Invalid invoke function name. Expecting \"delete\" \"getProperty\" \"propertyTransaction\" \"getPropertyHistory\"")
+	return shim.Error("Invalid invoke function name. Expecting \"delete\" \"createOwnership\"  \"getOwnership\" \"getOwnershipHistory\" \"propertyTransaction\" \"getProperty\" \"getPropertyHistory\"")
 }
 
 //====================================================================================================================
