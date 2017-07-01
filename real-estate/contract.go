@@ -18,27 +18,29 @@ package main
 
 import (
 	"fmt"
-	"strconv"
-	"errors"
 	"time"
+	"bytes"
+	"errors"
+	"strconv"
 	"encoding/json"
 	"github.com/hyperledger/fabric/core/chaincode/shim"
 	pb "github.com/hyperledger/fabric/protos/peer"
-	"bytes"
 )
 
 type Chaincode struct {
 }
 
 //TODO
-// - getOwnership(id) Ownership (CurrentState)
+// - getOwnership(id) Ownership (CurrentState)				*
 // - getOwnershipHistory(id) Ownership (History)
-// - getProperty(id) Property (CurrentState)
+// - getProperty(id) Property (CurrentState)				*
 // - getPropertyHistory(id) 						*
 // - propertyTransaction 						*
 
 //TODO
 // - make sure errors are all handled (custom responses where needed)
+// - handle check for verifying ownership exists prior to processing transaction
+// - update ownership after transaction goes through
 type Ownership struct {
 	Properties	[]Attribute			`json:"properties"`
 }
@@ -65,6 +67,12 @@ func (t *Chaincode) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
 	if function == "delete" {
 		// Deletes an entity from its state
 		return t.delete(stub, args)
+	} else if function == "createOwnership" {
+		// the old "Query" is now implemtned in invoke
+		return t.createOwnership(stub, args)
+	} else if function == "getOwnership" {
+		// the old "Query" is now implemtned in invoke
+		return t.getOwnership(stub, args)
 	} else if function == "getProperty" {
 		// the old "Query" is now implemtned in invoke
 		return t.getProperty(stub, args)
@@ -74,10 +82,9 @@ func (t *Chaincode) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
 		return t.getPropertyHistory(stub, args)
 	}
 
-	//TODO update
-	return shim.Error("Invalid invoke function name. Expecting \"move\" \"delete\" \"query\" \"findAll\"")
+	return shim.Error("Invalid invoke function name. Expecting \"delete\" \"getProperty\" \"propertyTransaction\" \"getPropertyHistory\"")
 }
-
+//====================================================================================================================
 // Deletes an entity from state
 func (t *Chaincode) delete(stub shim.ChaincodeStubInterface, args []string) pb.Response {
 	if len(args) != 1 {
@@ -95,7 +102,6 @@ func (t *Chaincode) delete(stub shim.ChaincodeStubInterface, args []string) pb.R
 	return shim.Success(nil)
 }
 
-//====================================================================================================================
 func createAttributeFromArgs(args []string) (*Attribute, error){
 
 	var attribute Attribute
@@ -135,20 +141,6 @@ func getAttributeListAsBytes(attribute []Attribute) ([]byte, error){
 
 }
 
-func getPropertyAsBytes(property Property) ([]byte, error){
-
-	var propertyBytes []byte
-	var err error
-
-	propertyBytes, err = json.Marshal(property)
-	if err != nil{
-		err = errors.New("Unable to convert property to json string")
-	}
-
-	return propertyBytes, err
-
-}
-
 func getFormattedTimeAsString(time time.Time, format string)(string, error){
 
 	var err error
@@ -162,21 +154,107 @@ func getFormattedTimeAsString(time time.Time, format string)(string, error){
 	return formattedTimeString, err
 
 }
+//====================================================================================================================
+//peer chaincode invoke -C mychannel -n mycc -c '{"Args":["createOwnership","ownership_1","{\"properties\":[{\"id\":\"genesis\",\"percentage\":0}]}"]}'
+//peer chaincode invoke -C mychannel -n mycc -c '{"Args":["createOwnership","ownership_1","{\"properties\":[]}"]}'
+func (t *Chaincode) createOwnership(stub shim.ChaincodeStubInterface, args []string) pb.Response {
 
-func confirmValidPercentage(buyers []Attribute) error{
-	var totalPercentage float64
+	var ownershipId string
 	var err error
 
-	for i := 0; i < len(buyers); i++ {
-		totalPercentage += buyers[i].Percentage
+	if len(args) != 2 {
+		return shim.Error("Incorrect number of arguments. Expecting 2")
 	}
 
-	if totalPercentage != 1 {
-		totalPercentageString := fmt.Sprint(totalPercentage)
-		err = errors.New("Total Percentage is not correct: " + totalPercentageString)
+	ownershipId = args[0]
+	ownershipString := args[1]
+	ownership := Ownership{}
+
+	err = json.Unmarshal([]byte(ownershipString), &ownership)
+	if err != nil {
+		return shim.Error(err.Error())
 	}
 
-	return err
+	ownershipAsBytes, err := getOwnershipAsBytes(ownership)
+	if err != nil {
+		return shim.Error(err.Error())
+	}
+
+	err = stub.PutState(ownershipId, ownershipAsBytes)
+	if err != nil {
+		return shim.Error(err.Error())
+	}
+
+	return shim.Success(nil)
+
+}
+
+//peer chaincode query -C mychannel -n mycc -c '{"Args":["getOwnership","property_1"]}'
+func (t *Chaincode) getOwnership(stub shim.ChaincodeStubInterface, args []string) pb.Response{
+
+	if len(args) != 1 {
+		return shim.Error("Incorrect number of arguments. Expecting ownership id to query")
+	}
+
+	ownershipId := args[0]
+
+	ownershipBytes, err := stub.GetState(ownershipId)
+	if err != nil {
+		return shim.Error(err.Error())
+	}
+
+	if ownershipBytes == nil {
+		jsonResp := "{\"Error\":\"Nil value for " + ownershipId + "\"}"
+		return shim.Error(jsonResp)
+	}
+
+	jsonResp := "{\"OwnershipId\":\"" + ownershipId + "\",\"Ownership Struct\":\"" + string(ownershipBytes) + "\"}"
+	fmt.Printf("Query Response:%s\n", jsonResp)
+
+	return shim.Success(ownershipBytes)
+}
+
+//peer chaincode invoke -C mychannel -n mycc -c '{"Args":["propertyTransaction","property_1","{\"saleDate\": \"2017-06-28T21:57:16\", \"salePrice\": 1000, \"owners\": [{\"id\":\"owner_3\",\"percentage\":0.45},{\"id\":\"owner_2\",\"percentage\":0.55}]}"]}'
+//peer chaincode invoke -C mychannel -n mycc -c '{"Args":["propertyTransaction","property_1","{\"saleDate\": \"2017-06-28T21:57:16\", \"salePrice\": 1000, \"owners\": [{\"id\":\"owner_1\",\"percentage\":0.32},{\"id\":\"owner_4\",\"percentage\":0.68}]}"]}'
+func (t *Chaincode) propertyTransaction(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+	var propertyId string
+	var propertyString string
+	var err error
+
+	if len(args) != 2 {
+		return shim.Error("Incorrect number of arguments. Expecting 2")
+	}
+
+	propertyId = args[0]
+	propertyString = args[1]
+	fmt.Printf("PropertyId = %d", propertyId)
+
+	property := Property{}
+
+	err = json.Unmarshal([]byte(propertyString), &property)
+	if err != nil {
+		return shim.Error(err.Error())
+	}
+
+	//TODO confirmOwnership
+
+	err = confirmValidPercentage(property.Owners)
+	if err != nil {
+		return shim.Error(err.Error())
+	}
+
+	// Write the state to the ledger
+	propertyAsBytes, err := getPropertyAsBytes(property)
+	if err != nil {
+		return shim.Error(err.Error())
+	}
+
+	err = stub.PutState(propertyId, propertyAsBytes)
+	if err != nil {
+		return shim.Error(err.Error())
+	}
+
+	return shim.Success(nil)
 }
 
 //peer chaincode query -C mychannel -n mycc -c '{"Args":["getHistoryForProperty","property_1"]}'
@@ -223,16 +301,6 @@ func (t *Chaincode) getPropertyHistory(stub shim.ChaincodeStubInterface, args []
 			buffer.WriteString(string(response.Value))
 		}
 
-		//buffer.WriteString(", \"Timestamp\":")
-		//buffer.WriteString("\"")
-		//buffer.WriteString(time.Unix(response.Timestamp.Seconds, int64(response.Timestamp.Nanos)).String())
-		//buffer.WriteString("\"")
-		//
-		//buffer.WriteString(", \"IsDelete\":")
-		//buffer.WriteString("\"")
-		//buffer.WriteString(strconv.FormatBool(response.IsDelete))
-		//buffer.WriteString("\"")
-
 		buffer.WriteString("}")
 		bArrayMemberAlreadyWritten = true
 	}
@@ -243,48 +311,7 @@ func (t *Chaincode) getPropertyHistory(stub shim.ChaincodeStubInterface, args []
 	return shim.Success(buffer.Bytes())
 }
 
-//peer chaincode invoke -C mychannel -n mycc -c '{"Args":["propertySale","property_1","{\"saleDate\": \"2017-06-28T21:57:16\", \"salePrice\": 1000, \"owners\": [{\"id\":\"owner_3\",\"percentage\":0.45},{\"id\":\"owner_2\",\"percentage\":0.55}]}"]}'
-//peer chaincode invoke -C mychannel -n mycc -c '{"Args":["propertySale","property_1","{\"saleDate\": \"2017-06-28T21:57:16\", \"salePrice\": 1000, \"owners\": [{\"id\":\"owner_1\",\"percentage\":0.32},{\"id\":\"owner_4\",\"percentage\":0.68}]}"]}'
-func (t *Chaincode) propertyTransaction(stub shim.ChaincodeStubInterface, args []string) pb.Response {
-	var propertyId string
-	var propertyString string
-	var err error
-
-	if len(args) != 2 {
-		return shim.Error("Incorrect number of arguments. Expecting 2")
-	}
-
-	propertyId = args[0]
-	propertyString = args[1]
-	fmt.Printf("PropertyId = %d", propertyId)
-
-	property := Property{}
-
-	err = json.Unmarshal([]byte(propertyString), &property)
-	if err != nil {
-		return shim.Error(err.Error())
-	}
-
-	err = confirmValidPercentage(property.Owners)
-	if err != nil {
-		return shim.Error(err.Error())
-	}
-
-	// Write the state to the ledger
-	propertyAsBytes, err := getPropertyAsBytes(property)
-	if err != nil {
-		return shim.Error(err.Error())
-	}
-
-	err = stub.PutState(propertyId, propertyAsBytes)
-	if err != nil {
-		return shim.Error(err.Error())
-	}
-
-	return shim.Success(nil)
-}
-
-//peer chaincode query -C mychannel -n mycc -c '{"Args":["queryProperty","property_1"]}'
+//peer chaincode query -C mychannel -n mycc -c '{"Args":["getProperty","property_1"]}'
 func (t *Chaincode) getProperty(stub shim.ChaincodeStubInterface, args []string) pb.Response{
 	var propertyId string
 	var err error
@@ -310,6 +337,50 @@ func (t *Chaincode) getProperty(stub shim.ChaincodeStubInterface, args []string)
 	fmt.Printf("Query Response:%s\n", jsonResp)
 
 	return shim.Success(propertyBytes)
+}
+
+func getPropertyAsBytes(property Property) ([]byte, error){
+
+	var propertyBytes []byte
+	var err error
+
+	propertyBytes, err = json.Marshal(property)
+	if err != nil{
+		err = errors.New("Unable to convert property to json string")
+	}
+
+	return propertyBytes, err
+
+}
+
+func getOwnershipAsBytes(ownership Ownership) ([]byte, error){
+
+	var ownershipBytes []byte
+	var err error
+
+	ownershipBytes, err = json.Marshal(ownership)
+	if err != nil{
+		err = errors.New("Unable to convert ownership to json string")
+	}
+
+	return ownershipBytes, err
+
+}
+
+func confirmValidPercentage(buyers []Attribute) error{
+	var totalPercentage float64
+	var err error
+
+	for i := 0; i < len(buyers); i++ {
+		totalPercentage += buyers[i].Percentage
+	}
+
+	if totalPercentage != 1 {
+		totalPercentageString := fmt.Sprint(totalPercentage)
+		err = errors.New("Total Percentage is not correct: " + totalPercentageString)
+	}
+
+	return err
 }
 
 func main() {
