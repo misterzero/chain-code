@@ -28,9 +28,6 @@ import (
 type Chaincode struct {
 }
 
-//TODO
-// - make layout of methods uniform
-// - fix loop in updateOwnershipProperties
 type Ownership struct {
 	Properties		[]Attribute		`json:"properties"`
 }
@@ -75,8 +72,6 @@ func (t *Chaincode) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
 
 }
 
-//peer chaincode invoke -C mychannel -n mycc -c '{"Args":["createOwnership","ownership_1","{\"properties\":[{\"id\":\"genesis\",\"percentage\":0}]}"]}'
-//peer chaincode invoke -C mychannel -n mycc -c '{"Args":["createOwnership","ownership_1","{\"properties\":[]}"]}'
 func (t *Chaincode) createOwnership(stub shim.ChaincodeStubInterface, args []string) pb.Response {
 
 	var ownershipId string
@@ -109,7 +104,6 @@ func (t *Chaincode) createOwnership(stub shim.ChaincodeStubInterface, args []str
 
 }
 
-//peer chaincode query -C mychannel -n mycc -c '{"Args":["getOwnership","ownership_1"]}'
 func (t *Chaincode) getOwnership(stub shim.ChaincodeStubInterface, args []string) pb.Response{
 
 	if len(args) != 1 {
@@ -130,7 +124,6 @@ func (t *Chaincode) getOwnership(stub shim.ChaincodeStubInterface, args []string
 
 }
 
-//peer chaincode query -C mychannel -n mycc -c '{"Args":["getOwnershipHistory","ownership_1"]}'
 func (t *Chaincode) getOwnershipHistory(stub shim.ChaincodeStubInterface, args []string) pb.Response {
 
 	if len(args) != 1 {
@@ -146,8 +139,6 @@ func (t *Chaincode) getOwnershipHistory(stub shim.ChaincodeStubInterface, args [
 
 }
 
-//peer chaincode invoke -C mychannel -n mycc -c '{"Args":["propertyTransaction","property_1","{\"saleDate\": \"2017-06-28T21:57:16\", \"salePrice\": 1000, \"owners\": [{\"id\":\"ownership_3\",\"percentage\":0.45},{\"id\":\"ownership_2\",\"percentage\":0.55}]}"]}'
-//peer chaincode invoke -C mychannel -n mycc -c '{"Args":["propertyTransaction","property_1","{\"saleDate\": \"2017-06-28T21:57:16\", \"salePrice\": 1000, \"owners\": [{\"id\":\"ownership_1\",\"percentage\":0.32},{\"id\":\"ownership_4\",\"percentage\":0.68}]}"]}'
 func (t *Chaincode) propertyTransaction(stub shim.ChaincodeStubInterface, args []string) pb.Response {
 
 	var propertyId string
@@ -196,7 +187,6 @@ func (t *Chaincode) propertyTransaction(stub shim.ChaincodeStubInterface, args [
 
 }
 
-//peer chaincode query -C mychannel -n mycc -c '{"Args":["getProperty","property_1"]}'
 func (t *Chaincode) getProperty(stub shim.ChaincodeStubInterface, args []string) pb.Response{
 
 	var propertyId string
@@ -225,7 +215,6 @@ func (t *Chaincode) getProperty(stub shim.ChaincodeStubInterface, args []string)
 
 }
 
-//peer chaincode query -C mychannel -n mycc -c '{"Args":["getPropertyHistory","property_1"]}'
 func (t *Chaincode) getPropertyHistory(stub shim.ChaincodeStubInterface, args []string) pb.Response {
 
 	if len(args) != 1 {
