@@ -131,42 +131,6 @@ func (t *Chaincode) getOwnershipHistory(stub shim.ChaincodeStubInterface, args [
 
 }
 
-//func (t *Chaincode) createProperty(stub shim.ChaincodeStubInterface, args []string) pb.Response {
-//
-//	var propertyId string
-//	var propertyString string
-//	var err error
-//
-//	if len(args) != 2 {
-//		return shim.Error("Incorrect number of arguments. Expecting 2")
-//	}
-//
-//	propertyId = args[0]
-//	propertyString = args[1]
-//
-//	property := Property{}
-//	err = json.Unmarshal([]byte(propertyString), &property)
-//	if err != nil {
-//		return shim.Error(err.Error())
-//	}
-//
-//
-//
-//
-//	//ownershipAsBytes, err := getOwnershipAsBytes(ownership)
-//	//if err != nil {
-//	//	return shim.Error(err.Error())
-//	//}
-//	//
-//	//err = stub.PutState(propertyId, ownershipAsBytes)
-//	//if err != nil {
-//	//	return shim.Error(err.Error())
-//	//}
-//
-//	return shim.Success(nil)
-//
-//}
-
 func (t *Chaincode) propertyTransaction(stub shim.ChaincodeStubInterface, args []string) pb.Response {
 
 	var propertyId string
@@ -186,12 +150,7 @@ func (t *Chaincode) propertyTransaction(stub shim.ChaincodeStubInterface, args [
 		return shim.Error(err.Error())
 	}
 
-
-	//TODO check if owner present and if not then create ownership
-	//
-	//
 	propertyOwnership, err := getOwnershipPropertyUpdateRequirements(stub, property.Owners)
-	//propertyOwnership, err := getOwnershipPropertyUpdateRequirements2(stub, propertyId, property.Owners)
 	if err != nil {
 		return shim.Error(err.Error())
 	}
@@ -301,15 +260,22 @@ func getOwnershipPropertyUpdateRequirements(stub shim.ChaincodeStubInterface, pr
 	var err error
 
 	for i := 0; i < len(propertyOwners); i++ {
-		propertyOwnersBytes, err := getOwnershipFromLedger(stub, propertyOwners[i].Id)
-		if err != nil {
+		var ownershipId string
+		var propertyOwnerBytes []byte
+		ownershipId = propertyOwners[i].Id
 
-			//TODO need to add the owners here if they are not in the ledger
-			err = errors.New("Unable to find ownershipId: " + propertyOwners[i].Id + "| " + err.Error())
-			return ownerAndPercentageData, err
+		propertyOwnerBytes, _ = getOwnershipFromLedger(stub, ownershipId)
+		if propertyOwnerBytes == nil {
+
+			ownership := Ownership{}
+			propertyOwnerBytes, err = getOwnershipAsBytes(ownership)
+			if err != nil {
+				return ownerAndPercentageData, err
+			}
+
 		}
 
-		var ownerBytesAndPercentage []interface{} = []interface{}{propertyOwnersBytes, propertyOwners[i].Percentage}
+		var ownerBytesAndPercentage []interface{} = []interface{}{propertyOwnerBytes, propertyOwners[i].Percentage}
 		ownerAndPercentageData[propertyOwners[i].Id] = ownerBytesAndPercentage
 
 	}
