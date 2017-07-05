@@ -51,6 +51,52 @@ func TestGetOwnership(t *testing.T){
 
 }
 
+func TestOwnershipUpdatedDuringPropertyTransaction(t *testing.T){
+
+	stub := getStub()
+
+	originalOwnership := getOwnership("ownership_3", `{"properties":[]}`)
+
+	checkInvokeOwnership(t, stub, originalOwnership)
+	checkGetOwnership(t, stub, originalOwnership)
+
+	owner1 := `"id":"ownership_3","percentage":0.45`
+	owner2 := `"id":"ownership_2","percentage":0.55`
+
+	owners := []string{owner1, owner2}
+
+	property := getProperty("property_1", `"2017-06-28T21:57:16"`, 1000, owners)
+
+	checkPropertyTransaction(t,stub, property)
+
+	updatedOwnership := getOwnership("ownership_3", `{"properties":[{"id":"property_1","percentage":0.45}]}`)
+
+	checkGetOwnership(t, stub, updatedOwnership)
+
+}
+
+func TestOwnershipCreatedDuringPropertyTransaction(t *testing.T){
+
+	stub := getStub()
+
+	badOwnership := TestAttribute{"ownership_3", ""}
+	checkGetOwnershipFail(t, stub, badOwnership)
+
+	owner1 := `"id":"ownership_3","percentage":0.45`
+	owner2 := `"id":"ownership_2","percentage":0.55`
+
+	owners := []string{owner1, owner2}
+
+	property := getProperty("property_1", `"2017-06-28T21:57:16"`, 1000, owners)
+
+	checkPropertyTransaction(t,stub, property)
+
+	updatedOwnership := getOwnership("ownership_3", `{"properties":[{"id":"property_1","percentage":0.45}]}`)
+
+	checkGetOwnership(t, stub, updatedOwnership)
+
+}
+
 func TestPropertyTransaction(t *testing.T){
 
 	stub := getStub()
@@ -78,8 +124,8 @@ func TestGetProperty(t *testing.T){
 
 	checkPropertyTransaction(t, stub, property)
 	checkGetProperty(t, stub, property)
-}
 
+}
 
 func checkInvokeOwnership(t *testing.T, stub *shim.MockStub, ownership TestAttribute) {
 
@@ -89,7 +135,7 @@ func checkInvokeOwnership(t *testing.T, stub *shim.MockStub, ownership TestAttri
 
 	res := stub.MockInvoke(function, ownershipArgs)
 	if res.Status != shim.OK {
-		fmt.Println("InvokeOwnership", ownership, "failed", string(res.Message))
+		fmt.Println(" InvokeOwnership", ownership, "failed", string(res.Message))
 		t.FailNow()
 	}
 
@@ -126,6 +172,30 @@ func checkGetOwnership(t *testing.T, stub *shim.MockStub, ownership TestAttribut
 	}
 	if string(res.Payload) != ownership.Value {
 		fmt.Println(function, " value", ownership.Key, "was not", ownership.Value, "as expected")
+		t.FailNow()
+	}
+
+}
+
+func checkGetOwnershipFail(t *testing.T, stub *shim.MockStub, ownership TestAttribute){
+
+	function := "getOwnership"
+	errorStatus := int32(500)
+	emptyPayload := ""
+
+	ownershipArgs := get(function, ownership.Key)
+
+	res := stub.MockInvoke(function, ownershipArgs)
+	if res.Status != errorStatus {
+		fmt.Println(function, ownership, "failed", string(res.Message))
+		t.FailNow()
+	}
+	if res.Payload != nil {
+		fmt.Println(function, ownership, "value returned")
+		t.FailNow()
+	}
+	if string(res.Payload) != "" {
+		fmt.Println(function, " value", ownership.Key, "was not", emptyPayload, "as expected")
 		t.FailNow()
 	}
 
