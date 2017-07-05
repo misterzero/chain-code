@@ -22,6 +22,7 @@ import (
 	"github.com/hyperledger/fabric/core/chaincode/shim"
 	"strconv"
 	"bytes"
+	"strings"
 )
 
 type TestAttribute struct {
@@ -52,7 +53,7 @@ func TestCreateOwnershipIncorrectArgs(t *testing.T){
 	badArgs := [][]byte{[]byte(function), []byte(ownershipId)}
 
 	res := stub.MockInvoke(function, badArgs)
-	output:= " CreateOwnership " + ownershipId + " did not fail |" + string(res.Message)
+	output:= " CreateOwnership " + ownershipId + " did not fail | " + string(res.Message)
 	if res.Status != errorStatus {
 		fmt.Println(output)
 		t.FailNow()
@@ -61,6 +62,32 @@ func TestCreateOwnershipIncorrectArgs(t *testing.T){
 		fmt.Println(output)
 		t.FailNow()
 	}
+
+}
+
+func TestCreateOwnershipInvalidJson(t *testing.T){
+
+	stub := getStub()
+
+	function := "createOwnership"
+	ownershipId := "ownership_1"
+	invalidJson := `"{"properties":}`
+	errorStatus := int32(500)
+	errorMessage := "Unable to convert json to Ownership struct"
+
+	badArgs := [][]byte{[]byte(function), []byte(ownershipId), []byte(invalidJson)}
+
+	res := stub.MockInvoke(function, badArgs)
+	output:= " CreateOwnership " + ownershipId + " did not fail | " + string(res.Message)
+	if res.Status != errorStatus {
+		fmt.Println(output)
+		t.FailNow()
+	}
+	if !strings.Contains(res.Message, errorMessage) {
+		fmt.Println(output)
+		t.FailNow()
+	}
+
 
 }
 
