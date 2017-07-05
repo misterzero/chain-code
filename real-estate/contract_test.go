@@ -41,7 +41,7 @@ func TestCreateOwnership(t *testing.T){
 
 }
 
-func TestCreateOwnershipIncorrectArgs(t *testing.T){
+func TestCreateOwnershipInvalidArgs(t *testing.T){
 
 	stub := getStub()
 
@@ -88,7 +88,6 @@ func TestCreateOwnershipInvalidJson(t *testing.T){
 		t.FailNow()
 	}
 
-
 }
 
 func TestGetOwnership(t *testing.T){
@@ -99,6 +98,33 @@ func TestGetOwnership(t *testing.T){
 
 	checkInvokeOwnership(t, stub, ownership)
 	checkGetOwnership(t, stub, ownership)
+
+}
+
+func TestGetOwnershipInvalidArgs(t *testing.T){
+
+	stub := getStub()
+
+	function := "getOwnership"
+	ownershipId := "ownership_1"
+	invalidArgument := "invalidArgument"
+	errorStatus := int32(500)
+	errorMessage := "Incorrect number of arguments. Expecting ownership id to query"
+
+	invalidArgs := [][]byte{[]byte(function), []byte(ownershipId), []byte(invalidArgument)}
+
+	res := stub.MockInvoke(function, invalidArgs)
+	output:= " GetOwnership " + ownershipId + " did not fail | " + string(res.Message)
+	if res.Status != errorStatus {
+		fmt.Println(output)
+		t.FailNow()
+	}
+	if res.Message != errorMessage {
+		fmt.Println(output)
+		t.FailNow()
+	}
+
+	fmt.Println("Error Message: " + string(res.Message))
 
 }
 
@@ -132,7 +158,7 @@ func TestOwnershipCreatedDuringPropertyTransaction(t *testing.T){
 
 	invalidOwnership := TestAttribute{"ownership_3", ""}
 
-	verifyOwnershipIsNotInLedger(t,stub, invalidOwnership)
+	checkGetOwnershipInvalid(t,stub, invalidOwnership)
 
 	owner1 := `"id":"ownership_3","percentage":0.45`
 	owner2 := `"id":"ownership_2","percentage":0.55`
@@ -220,6 +246,29 @@ func checkGetOwnership(t *testing.T, stub *shim.MockStub, ownership TestAttribut
 	}
 	if res.Payload == nil {
 		fmt.Println(function, ownership, "failed to get value")
+		t.FailNow()
+	}
+	if string(res.Payload) != ownership.Value {
+		fmt.Println(function, " value", ownership.Key, "was not", ownership.Value, "as expected")
+		t.FailNow()
+	}
+
+}
+
+func checkGetOwnershipInvalid(t *testing.T, stub *shim.MockStub, ownership TestAttribute){
+
+	function := "getOwnership"
+	errorStatus := int32(500)
+
+	ownershipArgs := get(function, ownership.Key)
+
+	res := stub.MockInvoke(function, ownershipArgs)
+	if res.Status != errorStatus {
+		fmt.Println(function, ownership, "failed", string(res.Message))
+		t.FailNow()
+	}
+	if res.Payload != nil {
+		fmt.Println(function, ownership, "value returned")
 		t.FailNow()
 	}
 	if string(res.Payload) != ownership.Value {
@@ -370,28 +419,5 @@ func getStub() (*shim.MockStub){
 	stub := shim.NewMockStub("contract", scc)
 
 	return stub
-
-}
-
-func verifyOwnershipIsNotInLedger(t *testing.T, stub *shim.MockStub, ownership TestAttribute){
-
-	function := "getOwnership"
-	errorStatus := int32(500)
-
-	ownershipArgs := get(function, ownership.Key)
-
-	res := stub.MockInvoke(function, ownershipArgs)
-	if res.Status != errorStatus {
-		fmt.Println(function, ownership, "failed", string(res.Message))
-		t.FailNow()
-	}
-	if res.Payload != nil {
-		fmt.Println(function, ownership, "value returned")
-		t.FailNow()
-	}
-	if string(res.Payload) != ownership.Value {
-		fmt.Println(function, " value", ownership.Key, "was not", ownership.Value, "as expected")
-		t.FailNow()
-	}
 
 }
