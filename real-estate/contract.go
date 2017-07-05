@@ -25,8 +25,7 @@ import (
 	pb "github.com/hyperledger/fabric/protos/peer"
 )
 
-type Chaincode struct {
-}
+type Chaincode struct {}
 
 type Ownership struct {
 	Properties		[]Attribute		`json:"properties"`

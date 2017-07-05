@@ -23,6 +23,7 @@ import (
 	"strconv"
 	"bytes"
 	"strings"
+	"encoding/json"
 )
 
 type TestAttribute struct {
@@ -190,6 +191,68 @@ func TestPropertyTransaction(t *testing.T){
 
 }
 
+func TestPropertyTransactionInvalidArgs(t *testing.T) {
+
+	stub := getStub()
+
+	owner1 := `"id":"ownership_3","percentage":0.45`
+	owner2 := `"id":"ownership_2","percentage":0.55`
+
+	owners := []string{owner1, owner2}
+
+	property := getProperty("property_1", `"2017-06-28T21:57:16"`, 1000, owners)
+
+	function := "propertyTransaction"
+	errorStatus := int32(500)
+	errorMessage := "Incorrect number of arguments. Expecting 2"
+
+	propertyArgs := get(function, property.Key)
+	res := stub.MockInvoke(function, propertyArgs)
+
+	invalidPropertyJson, err := json.Marshal(property)
+	if err != nil {
+		fmt.Println(err)
+	}
+	output := "PropertyTransacation" + string(invalidPropertyJson) + "did not fail | " + string(res.Message)
+	if res.Status != errorStatus {
+		fmt.Println(output)
+		t.FailNow()
+	}
+	if !strings.Contains(res.Message, errorMessage) {
+		fmt.Println(output)
+		t.FailNow()
+	}
+
+}
+
+func TestPropertyTransactionInvalidJson(t *testing.T) {
+
+	stub := getStub()
+
+	function := "propertyTransaction"
+	propertyId := "property_1"
+	invalidJson := `"{"salePrice":1000, "owners":[{"id":"ownership_3","percentage":0.45},{"id":"ownership_2","percentage":0.55}]}"`
+	errorStatus := int32(500)
+	//errorMessage := "Unable to convert json to Ownership struct"
+
+	badArgs := [][]byte{[]byte(function), []byte(propertyId), []byte(invalidJson)}
+
+	res := stub.MockInvoke(function, badArgs)
+	output:= " PropertyTransaction " + propertyId + " did not fail | " + string(res.Message)
+	if res.Status != errorStatus {
+		fmt.Println(output)
+		t.FailNow()
+	}
+
+	fmt.Println(res.Message)
+
+	//if !strings.Contains(res.Message, errorMessage) {
+	//	fmt.Println(output)
+	//	t.FailNow()
+	//}
+
+}
+
 func TestGetProperty(t *testing.T){
 
 	stub := getStub()
@@ -292,6 +355,20 @@ func checkPropertyTransaction(t *testing.T, stub *shim.MockStub, property TestAt
 
 }
 
+func checkPropertyTransactionInvalid(t *testing.T, stub *shim.MockStub, property TestAttribute){
+
+	function := "propertyTransaction"
+	//errorStatus := int32(500)
+
+	propertyArgs := create(function, property.Key, property.Value)
+	res := stub.MockInvoke(function, propertyArgs)
+	if res.Status != shim.OK {
+		fmt.Println("InvokeProperty", property, "failed", string(res.Message))
+		t.FailNow()
+	}
+
+}
+
 func checkPropertyState(t *testing.T, stub *shim.MockStub, property TestAttribute) {
 
 	bytes := stub.State[property.Key]
@@ -357,6 +434,30 @@ func getProperty(propertyId string, saleDate string, salePrice float64, owners [
 	buffer.WriteString(ownersKey)
 	ownersAttribute := getOwners(propertyId, owners)
 	buffer.WriteString(ownersAttribute.Value)
+
+	buffer.WriteString("}")
+
+	jsonProperty := TestAttribute{propertyId, buffer.String()}
+
+	return jsonProperty
+
+}
+
+func getPropertyInvalid(propertyId string, saleDate string, salePrice float64) (TestAttribute) {
+
+	var buffer bytes.Buffer
+
+	buffer.WriteString("{")
+
+	saleDateKey := `"saleDate":`
+	buffer.WriteString(saleDateKey)
+	buffer.WriteString(saleDate)
+	buffer.WriteString(",")
+
+	salePriceKey := `"salePrice":`
+	buffer.WriteString(salePriceKey)
+	jsonSalePrice := strconv.FormatFloat(salePrice, 'f', -1, 64)
+	buffer.WriteString(jsonSalePrice)
 
 	buffer.WriteString("}")
 
