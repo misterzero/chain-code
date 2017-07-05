@@ -352,7 +352,7 @@ func getHistory(stub shim.ChaincodeStubInterface, id string, historyType string)
 	var empty []byte
 	resultsIterator, err := stub.GetHistoryForKey(id)
 	if err != nil {
-		err = errors.New("Unabke to get history for key: " + id + err.Error())
+		err = errors.New("Unable to get history for key: " + id + " | "+ err.Error())
 		return empty, err
 	}
 	defer resultsIterator.Close()
