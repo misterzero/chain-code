@@ -54,7 +54,7 @@ func checkInvokeOwnership(t *testing.T, stub *shim.MockStub, ownership TestAttri
 
 	function := "createOwnership"
 
-	ownershipArgs := getOwnershipCall(function, ownership.Key, ownership.Value)
+	ownershipArgs := create(function, ownership.Key, ownership.Value)
 
 	res := stub.MockInvoke(function, ownershipArgs)
 	if res.Status != shim.OK {
@@ -82,7 +82,7 @@ func checkGetOwnership(t *testing.T, stub *shim.MockStub, ownership TestAttribut
 
 	function := "getOwnership"
 
-	ownershipArgs := [][]byte{[]byte(function), []byte(ownership.Key)}
+	ownershipArgs := get(function, ownership.Key)
 
 	res := stub.MockInvoke(function, ownershipArgs)
 	if res.Status != shim.OK {
@@ -108,17 +108,29 @@ func getOwnership(ownershipId string, properties string) (TestAttribute){
 
 }
 
-func getOwnershipCall(function string, ownershipId string, properties string) ([][]byte) {
+func create(function string, id string, jsonStruct string) ([][]byte) {
 
 	method := []byte(function)
-	key := []byte(ownershipId)
-	value := []byte(properties)
+	key := []byte(id)
+	value := []byte(jsonStruct)
 
 	args := [][]byte{method, key, value}
 
 	return args
-
 }
+
+func get(function string, id string) ([][]byte) {
+
+	method := []byte(function)
+	key := []byte(id)
+
+	args := [][]byte{method, key}
+
+	return args
+}
+
+
+
 
 func getStub() (*shim.MockStub){
 
