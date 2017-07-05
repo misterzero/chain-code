@@ -75,6 +75,9 @@ func (t *Chaincode) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
 func (t *Chaincode) createOwnership(stub shim.ChaincodeStubInterface, args []string) pb.Response {
 
 	var err error
+	if len(args) != 2 {
+		return shim.Error("Incorrect number of arguments. Expecting ownership id and properties")
+	}
 
 	ownershipId := args[0]
 	ownershipString := args[1]
@@ -82,7 +85,7 @@ func (t *Chaincode) createOwnership(stub shim.ChaincodeStubInterface, args []str
 	ownership := Ownership{}
 	err = json.Unmarshal([]byte(ownershipString), &ownership)
 	if err != nil {
-		err := errors.New("Unable to convert json to Ownership struct |" + err.Error())
+		err := errors.New("Unable to convert json to Ownership struct | " + err.Error())
 		return shim.Error(err.Error())
 	}
 
