@@ -27,8 +27,6 @@ import (
 )
 
 //TODO clean up error messages
-//TODO make generic message for error
-//TODO make a single location for expected error message
 type TestAttribute struct {
 	Key	string
 	Value	string
@@ -267,19 +265,20 @@ func TestGetProperty(t *testing.T){
 
 }
 
-//TODO fix error message
 func checkInvokeOwnership(t *testing.T, stub *shim.MockStub, ownership TestAttribute) {
 
 	ownershipArgs := getThreeArgLedgerArray(createOwnership, ownership.Key, ownership.Value)
 
+	message:= " | " + createOwnership + " with args: {" + string(ownershipArgs[1]) + "," + string(ownershipArgs[2]) + "}, failed. "
+
 	res := stub.MockInvoke(createOwnership, ownershipArgs)
 	if res.Status != shim.OK {
-		fmt.Println(" InvokeOwnership", ownership, "failed", string(res.Message))
+		message := message +  "[res.Status=" + strconv.FormatInt(int64(res.Status), 10) + "]"
+		fmt.Println(message)
 		t.FailNow()
 	}
 }
 
-//TODO fix error message
 func checkOwnershipState(t *testing.T, stub *shim.MockStub, ownership TestAttribute) {
 
 	bytes := stub.State[ownership.Key]
@@ -294,41 +293,31 @@ func checkOwnershipState(t *testing.T, stub *shim.MockStub, ownership TestAttrib
 
 }
 
-//TODO fix error message
 func checkGetOwnership(t *testing.T, stub *shim.MockStub, ownership TestAttribute){
 
 	ownershipArgs := getTwoArgLedgerArray(getOwnership, ownership.Key)
 
-	res := stub.MockInvoke(getOwnership, ownershipArgs)
-	if res.Status != shim.OK {
-		fmt.Println(getOwnership, ownership, "failed", string(res.Message))
-		t.FailNow()
-	}
-	if res.Payload == nil {
-		fmt.Println(getOwnership, ownership, "failed to get value")
-		t.FailNow()
-	}
-	if string(res.Payload) != ownership.Value {
-		fmt.Println(getOwnership, " value", ownership.Key, "was not", ownership.Value, "as expected")
-		t.FailNow()
-	}
+	message:= " | " + getOwnership + " with args: {" + string(ownershipArgs[1]) + "}, failed. "
+
+	handleExpectedSuccess(t, stub, getOwnership, message, ownershipArgs, ownership.Value)
 
 }
 
-//TODO fix error message
 func checkPropertyTransaction(t *testing.T, stub *shim.MockStub, property TestAttribute){
 
 	propertyArgs := getThreeArgLedgerArray(propertyTransaction, property.Key, property.Value)
 
+	message:= " | " + propertyTransaction + " with args: {" + string(propertyArgs[1]) + "," + string(propertyArgs[2]) + "}, failed. "
+
 	res := stub.MockInvoke(propertyTransaction, propertyArgs)
 	if res.Status != shim.OK {
-		fmt.Println("InvokeProperty", property, "failed", string(res.Message))
+		message := message +  "[res.Status=" + strconv.FormatInt(int64(res.Status), 10) + "]"
+		fmt.Println(message)
 		t.FailNow()
 	}
 
 }
 
-//TODO fix error message
 func checkPropertyState(t *testing.T, stub *shim.MockStub, property TestAttribute) {
 
 	bytes := stub.State[property.Key]
@@ -343,24 +332,13 @@ func checkPropertyState(t *testing.T, stub *shim.MockStub, property TestAttribut
 
 }
 
-//TODO fix error message
 func checkGetProperty(t *testing.T, stub *shim.MockStub, property TestAttribute){
 
 	propertyArgs := getTwoArgLedgerArray(getProperty, property.Key)
 
-	res := stub.MockInvoke(getProperty, propertyArgs)
-	if res.Status != shim.OK {
-		fmt.Println(getProperty, property, "failed", string(res.Message))
-		t.FailNow()
-	}
-	if res.Payload == nil {
-		fmt.Println(getProperty, property, "failed to get value")
-		t.FailNow()
-	}
-	if string(res.Payload) != property.Value {
-		fmt.Println(getProperty, " value", property.Key, "was not", property.Value, "as expected")
-		t.FailNow()
-	}
+	message:= " | " + getProperty + " with args: {" + string(propertyArgs[1]) + "}, failed. "
+
+	handleExpectedSuccess(t, stub, getProperty, message, propertyArgs, property.Value)
 
 }
 
@@ -417,6 +395,27 @@ func getTestOwners(propertyId string, owners []string) (TestAttribute) {
 	propertyOwners := TestAttribute{propertyId, buffer.String()}
 
 	return propertyOwners
+
+}
+
+func handleExpectedSuccess(t *testing.T, stub *shim.MockStub, argument string, outputMessage string, invalidArgs [][]byte, attemptedPayload string){
+
+	res := stub.MockInvoke(argument, invalidArgs)
+	if res.Status != shim.OK {
+		msg := outputMessage +  "[res.Status=" + strconv.FormatInt(int64(res.Status), 10) + "]"
+		fmt.Println(msg)
+		t.FailNow()
+	}
+	if res.Payload == nil {
+		msg := outputMessage + "[res.Message=" + string(res.Message) + "]"
+		fmt.Println(msg)
+		t.FailNow()
+	}
+	if string(res.Payload) != attemptedPayload {
+		msg := outputMessage + "[res.Payload=" + string(res.Payload) + "]"
+		fmt.Println(msg)
+		t.FailNow()
+	}
 
 }
 
