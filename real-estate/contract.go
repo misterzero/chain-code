@@ -23,6 +23,7 @@ import (
 	"encoding/json"
 	"github.com/hyperledger/fabric/core/chaincode/shim"
 	pb "github.com/hyperledger/fabric/protos/peer"
+	"strings"
 )
 
 type Chaincode struct {}
@@ -88,7 +89,6 @@ func (t *Chaincode) createOwnership(stub shim.ChaincodeStubInterface, args []str
 		return shim.Error(err.Error())
 	}
 
-
 	err = addOwnershipToLedger(stub, ownershipId, ownership)
 	if err != nil {
 		return shim.Error(err.Error())
@@ -148,6 +148,11 @@ func (t *Chaincode) propertyTransaction(stub shim.ChaincodeStubInterface, args [
 
 	property := Property{}
 	err = json.Unmarshal([]byte(propertyString), &property)
+	if err != nil {
+		return shim.Error(err.Error())
+	}
+
+	err = verifyValidProperty(property)
 	if err != nil {
 		return shim.Error(err.Error())
 	}
@@ -291,6 +296,7 @@ func updateOwnershipProperties(stub shim.ChaincodeStubInterface, propertyId stri
 	var err error
 
 	for k, _ := range propertyOwnership {
+
 		ownership := Ownership{}
 		err = json.Unmarshal(propertyOwnership[k][0].([]byte), &ownership)
 		if err != nil {
@@ -357,18 +363,21 @@ func getHistory(stub shim.ChaincodeStubInterface, id string, historyType string)
 		err = errors.New("Unable to get history for key: " + id + " | "+ err.Error())
 		return empty, err
 	}
+
 	defer resultsIterator.Close()
 
 	var buffer bytes.Buffer
 	var historyMessage string
 	buffer.WriteString("[")
-
 	bArrayMemberAlreadyWritten := false
+
 	for resultsIterator.HasNext() {
+
 		response, err := resultsIterator.Next()
 		if err != nil {
 			return empty, err
 		}
+
 		// Add a comma before array members, suppress it for the first array member
 		if bArrayMemberAlreadyWritten == true {
 			buffer.WriteString(",")
@@ -385,6 +394,7 @@ func getHistory(stub shim.ChaincodeStubInterface, id string, historyType string)
 		}
 
 		buffer.WriteString(historyMessage)
+
 		// if it was a delete operation on given key, then we need to set the
 		//corresponding value null. Else, we will write the response.Value
 		//as-is (as the Value itself a JSON property)
@@ -397,10 +407,30 @@ func getHistory(stub shim.ChaincodeStubInterface, id string, historyType string)
 		buffer.WriteString("}")
 		bArrayMemberAlreadyWritten = true
 	}
+
 	buffer.WriteString("]")
 
 	return buffer.Bytes(), err
 
+}
+
+func verifyValidProperty(property Property) (error){
+
+	var err error
+
+	if strings.TrimSpace(property.SaleDate) == "" {
+		err = errors.New("A sale date is required.")
+		return err
+	}
+	if property.SalePrice < 1 {
+		err = errors.New("The sale price must be greater than 0.")
+		return err
+	}
+	if len(property.Owners) < 1 {
+		err = errors.New("At least one owner is required.")
+	}
+
+	return err
 }
 
 func confirmValidPercentage(buyers []Attribute) error{
@@ -422,8 +452,10 @@ func confirmValidPercentage(buyers []Attribute) error{
 }
 
 func main() {
+
 	err := shim.Start(new(Chaincode))
 	if err != nil {
 		fmt.Printf("Error starting Simple chaincode: %s", err)
 	}
+
 }
