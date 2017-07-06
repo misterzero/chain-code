@@ -20,10 +20,10 @@ import (
 	"fmt"
 	"bytes"
 	"errors"
+	"strings"
 	"encoding/json"
 	"github.com/hyperledger/fabric/core/chaincode/shim"
 	pb "github.com/hyperledger/fabric/protos/peer"
-	"strings"
 )
 
 type Chaincode struct {}
@@ -410,5 +410,8 @@ func main() {
 	if err != nil {
 		fmt.Printf("Error starting Simple chaincode: %s", err)
 	}
+
+	buildPropertyJson()
+	buildOwnershipJson()
 
 }
