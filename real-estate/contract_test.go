@@ -23,7 +23,7 @@ import (
 	"strconv"
 	"bytes"
 	"strings"
-	"encoding/json"
+	//"encoding/json"
 )
 
 //TODO clean up error messages
@@ -45,6 +45,16 @@ const dateString = `"2017-06-28T21:57:16"`
 const emptyOwnershipPropertyJson = `{"properties":[]}`
 const errorStatus = int32(500)
 
+const createOwnershipArgError = "Incorrect number of arguments. Expecting ownership id and properties"
+const getOwnershipArgError = "Incorrect number of arguments. Expecting ownership id to query"
+const invalidJsonForOwnershipStructError = "Unable to convert json to Ownership struct"
+
+const createPropertyTransactionArgError = "Incorrect number of arguments. Expecting 2"
+const createPropertyTransactionMissingSaleDateError = "A sale date is required."
+const createPropertyTransactionGreaterThanZeroSalePriceError = "The sale price must be greater than 0"
+const createPropertyTransactionTotalPercentageOfOneError = "Total Percentage can not be greater than or less than 1. Your total percentage ="
+const createPropertyTransactionNoOwnersError = "At least one owner is required."
+
 
 func TestCreateOwnership(t *testing.T){
 
@@ -57,22 +67,31 @@ func TestCreateOwnership(t *testing.T){
 
 }
 
-func TestCreateOwnershipInvalidArgs(t *testing.T){
+func TestCreateOwnershipExtraArgs(t *testing.T){
 
 	stub := getStub()
 
-	errorMessage := "Incorrect number of arguments. Expecting ownership id and properties"
+	invalidArgument := "invalidArgument"
+	
+	invalidArgs := getThreeArgLedgerArray(createOwnership, ownership_1, emptyOwnershipPropertyJson)
+	invalidArgs = append(invalidArgs, []byte(invalidArgument))
 
-	invalidArgs := getTwoArgLedgerArray(createOwnership, ownership_1)
+	msg := " | " + createOwnership + " with args: {" + string(invalidArgs[1]) + "," + string(invalidArgs[2]) + "}, did not fail. "
 
 	res := stub.MockInvoke(createOwnership, invalidArgs)
-	output:= " CreateOwnership " + ownership_1 + " did not fail | " + string(res.Message)
 	if res.Status != errorStatus {
-		fmt.Println(output)
+		msg := msg +  "[res.Status=" + strconv.FormatInt(int64(res.Status), 10) + "]"
+		fmt.Println(msg)
 		t.FailNow()
 	}
-	if res.Message != errorMessage {
-		fmt.Println(output)
+	if res.Message != createOwnershipArgError {
+		msg := msg + "[res.Message=" + string(res.Message) + "]"
+		fmt.Println(msg)
+		t.FailNow()
+	}
+	if string(res.Payload) == invalidArgument{
+		msg := msg + "[res.Payload=" + string(res.Payload) + "]"
+		fmt.Println(msg)
 		t.FailNow()
 	}
 
@@ -83,18 +102,24 @@ func TestCreateOwnershipInvalidJson(t *testing.T){
 	stub := getStub()
 
 	invalidJson := `"{"properties":}`
-	errorMessage := "Unable to convert json to Ownership struct"
 
 	invalidArgs := getThreeArgLedgerArray(createOwnership, ownership_1, invalidJson)
+	msg := " | " + createOwnership + " with args: {" + string(invalidArgs[1]) + "," + string(invalidArgs[2]) + "}, did not fail. "
 
 	res := stub.MockInvoke(createOwnership, invalidArgs)
-	output:= " CreateOwnership " + ownership_1 + " did not fail | " + string(res.Message)
 	if res.Status != errorStatus {
-		fmt.Println(output)
+		msg := msg +  "[res.Status=" + strconv.FormatInt(int64(res.Status), 10) + "]"
+		fmt.Println(msg)
 		t.FailNow()
 	}
-	if !strings.Contains(res.Message, errorMessage) {
-		fmt.Println(output)
+	if !strings.Contains(res.Message, invalidJsonForOwnershipStructError) {
+		msg := msg + "[res.Message=" + string(res.Message) + "]"
+		fmt.Println(msg)
+		t.FailNow()
+	}
+	if string(res.Payload) == invalidJson{
+		msg := msg + "[res.Payload=" + string(res.Payload) + "]"
+		fmt.Println(msg)
 		t.FailNow()
 	}
 
@@ -116,22 +141,26 @@ func TestGetOwnershipExtraArgs(t *testing.T){
 	stub := getStub()
 
 	invalidArgument := "invalidArgument"
-	errorMessage := "Incorrect number of arguments. Expecting ownership id to query"
 
 	invalidArgs := getThreeArgLedgerArray(getOwnership, ownership_1, invalidArgument)
+	msg := " | " + getOwnership + " with args: {" + string(invalidArgs[1]) + "," + string(invalidArgs[2]) + "}, did not fail. "
 
 	res := stub.MockInvoke(getOwnership, invalidArgs)
-	output:= " GetOwnership " + ownership_1 + " did not fail | " + string(res.Message)
 	if res.Status != errorStatus {
-		fmt.Println(output)
+		msg := msg +  "[res.Status=" + strconv.FormatInt(int64(res.Status), 10) + "]"
+		fmt.Println(msg)
 		t.FailNow()
 	}
-	if res.Message != errorMessage {
-		fmt.Println(output)
+	if res.Message != getOwnershipArgError {
+		msg := msg + "[res.Message=" + string(res.Message) + "]"
+		fmt.Println(msg)
 		t.FailNow()
 	}
-
-	fmt.Println("Error Message: " + string(res.Message))
+	if string(res.Payload) == invalidArgument{
+		msg := msg + "[res.Payload=" + string(res.Payload) + "]"
+		fmt.Println(msg)
+		t.FailNow()
+	}
 
 }
 
@@ -144,12 +173,7 @@ func TestOwnershipUpdatedDuringPropertyTransaction(t *testing.T){
 	checkInvokeOwnership(t, stub, originalOwnership)
 	checkGetOwnership(t, stub, originalOwnership)
 
-	owner1 := `"id":"ownership_3","percentage":0.45`
-	owner2 := `"id":"ownership_2","percentage":0.55`
-
-	owners := []string{owner1, owner2}
-
-	property := getTestProperty(property_1, dateString, 1000, owners)
+	property := getTestProperty(property_1, dateString, 1000, getValidOwners())
 
 	checkPropertyTransaction(t,stub, property)
 
@@ -167,12 +191,7 @@ func TestOwnershipCreatedDuringPropertyTransaction(t *testing.T){
 
 	checkGetOwnershipInvalid(t,stub, invalidOwnership)
 
-	owner1 := `"id":"ownership_3","percentage":0.45`
-	owner2 := `"id":"ownership_2","percentage":0.55`
-
-	owners := []string{owner1, owner2}
-
-	property := getTestProperty(property_1, dateString, 1000, owners)
+	property := getTestProperty(property_1, dateString, 1000, getValidOwners())
 
 	checkPropertyTransaction(t,stub, property)
 
@@ -197,33 +216,27 @@ func TestPropertyTransaction(t *testing.T){
 
 }
 
-func TestPropertyTransactionNotEnoughArgs(t *testing.T) {
+func TestPropertyTransactionExtraArgs(t *testing.T) {
 
 	stub := getStub()
 
-	owner1 := `"id":"ownership_3","percentage":0.45`
-	owner2 := `"id":"ownership_2","percentage":0.55`
+	invalidArgument := "invalidArgument"
+	validJson := `{"saleDate":"2017-06-28T21:57:16","salePrice":-1,"owners":[{"id":"ownership_3","percentage":0.45},{"id":"ownerhip_2","percentage":0.55}]}`
 
-	owners := []string{owner1, owner2}
+	invalidArgs := getThreeArgLedgerArray(propertyTransaction, property_1, validJson)
+	invalidArgs = append(invalidArgs, []byte(invalidArgument))
 
-	property := getTestProperty(property_1, dateString, 1000, owners)
+	msg := " | " + propertyTransaction + " with args: {" + string(invalidArgs[1]) + "," + string(invalidArgs[2]) + ", " + string(invalidArgs[3]) + "}, did not fail. "
 
-	errorMessage := "Incorrect number of arguments. Expecting 2"
-
-	propertyArgs := getTwoArgLedgerArray(propertyTransaction, property.Key)
-	res := stub.MockInvoke(propertyTransaction, propertyArgs)
-
-	invalidPropertyJson, err := json.Marshal(property)
-	if err != nil {
-		fmt.Println(err)
-	}
-	output := "PropertyTransacation" + string(invalidPropertyJson) + "did not fail | " + string(res.Message)
+	res := stub.MockInvoke(propertyTransaction, invalidArgs)
 	if res.Status != errorStatus {
-		fmt.Println(output)
+		msg := msg +  "[res.Status=" + strconv.FormatInt(int64(res.Status), 10) + "]"
+		fmt.Println(msg)
 		t.FailNow()
 	}
-	if !strings.Contains(res.Message, errorMessage) {
-		fmt.Println(output)
+	if !strings.Contains(res.Message, createPropertyTransactionArgError) {
+		msg := msg + "[res.Message=" + string(res.Message) + "]"
+		fmt.Println(msg)
 		t.FailNow()
 	}
 
@@ -234,18 +247,24 @@ func TestPropertyTransactionMissingSaleDate(t *testing.T) {
 	stub := getStub()
 
 	missingSaleDateJson := `{"salePrice":1000,"owners":[{"id":"ownership_3","percentage":0.45},{"id":"ownership_2","percentage":0.55}]}`
-	errorMessage := "A sale date is required."
 
 	invalidArgs := getThreeArgLedgerArray(propertyTransaction, property_1, missingSaleDateJson)
+	msg := " | " + propertyTransaction + " with args: {" + string(invalidArgs[1]) + "," + string(invalidArgs[2]) + "}, did not fail. "
 
 	res := stub.MockInvoke(propertyTransaction, invalidArgs)
-	output:= " PropertyTransaction " + property_1 + " did not fail | " + string(res.Message)
 	if res.Status != errorStatus {
-		fmt.Println(output)
+		msg := msg +  "[res.Status=" + strconv.FormatInt(int64(res.Status), 10) + "]"
+		fmt.Println(msg)
 		t.FailNow()
 	}
-	if !strings.Contains(res.Message, errorMessage) {
-		fmt.Println(output)
+	if !strings.Contains(res.Message, createPropertyTransactionMissingSaleDateError) {
+		msg := msg + "[res.Message=" + string(res.Message) + "]"
+		fmt.Println(msg)
+		t.FailNow()
+	}
+	if string(res.Payload) == missingSaleDateJson{
+		msg := msg + "[res.Payload=" + string(res.Payload) + "]"
+		fmt.Println(msg)
 		t.FailNow()
 	}
 
@@ -256,18 +275,24 @@ func TestPropertyTransactionNegativeSalePrice(t *testing.T) {
 	stub := getStub()
 
 	negativeSalePriceJson := `{"saleDate":"2017-06-28T21:57:16","salePrice":-1,"owners":[{"id":"ownership_3","percentage":0.45},{"id":"ownerhip_2","percentage":0.55}]}`
-	errorMessage := "The sale price must be greater than 0"
 
 	invalidArgs := getThreeArgLedgerArray(propertyTransaction, property_1, negativeSalePriceJson)
+	msg := " | " + propertyTransaction + " with args: {" + string(invalidArgs[1]) + "," + string(invalidArgs[2]) + "}, did not fail. "
 
 	res := stub.MockInvoke(propertyTransaction, invalidArgs)
-	output:= " PropertyTransaction " + property_1 + " did not fail | " + string(res.Message)
 	if res.Status != errorStatus {
-		fmt.Println(output)
+		msg := msg +  "[res.Status=" + strconv.FormatInt(int64(res.Status), 10) + "]"
+		fmt.Println(msg)
 		t.FailNow()
 	}
-	if !strings.Contains(res.Message, errorMessage) {
-		fmt.Println(output)
+	if !strings.Contains(res.Message, createPropertyTransactionGreaterThanZeroSalePriceError) {
+		msg := msg + "[res.Message=" + string(res.Message) + "]"
+		fmt.Println(msg)
+		t.FailNow()
+	}
+	if string(res.Payload) == negativeSalePriceJson{
+		msg := msg + "[res.Payload=" + string(res.Payload) + "]"
+		fmt.Println(msg)
 		t.FailNow()
 	}
 
@@ -278,18 +303,24 @@ func TestPropertyTransactionNoOwners(t *testing.T) {
 	stub := getStub()
 
 	noOwnersJson := `{"saleDate":"2017-06-28T21:57:16","salePrice":1000,"owners":[]}`
-	errorMessage := "At least one owner is required."
 	
 	invalidArgs := getThreeArgLedgerArray(propertyTransaction, property_1, noOwnersJson)
+	msg := " | " + propertyTransaction + " with args: {" + string(invalidArgs[1]) + "," + string(invalidArgs[2]) + "}, did not fail. "
 
 	res := stub.MockInvoke(propertyTransaction, invalidArgs)
-	output:= " PropertyTransaction " + property_1 + " did not fail | " + string(res.Message)
 	if res.Status != errorStatus {
-		fmt.Println(output)
+		msg := msg +  "[res.Status=" + strconv.FormatInt(int64(res.Status), 10) + "]"
+		fmt.Println(msg)
 		t.FailNow()
 	}
-	if !strings.Contains(res.Message, errorMessage) {
-		fmt.Println(output)
+	if !strings.Contains(res.Message, createPropertyTransactionNoOwnersError) {
+		msg := msg + "[res.Message=" + string(res.Message) + "]"
+		fmt.Println(msg)
+		t.FailNow()
+	}
+	if string(res.Payload) == noOwnersJson{
+		msg := msg + "[res.Payload=" + string(res.Payload) + "]"
+		fmt.Println(msg)
 		t.FailNow()
 	}
 
@@ -300,18 +331,19 @@ func TestPropertyTransactionTooLowTotalOwnerPercentage(t *testing.T) {
 	stub := getStub()
 
 	tooLowOwnerPercentage := `{"saleDate":"2017-06-28T21:57:16","salePrice":1000,"owners":[{"id":"ownership_3","percentage":0.45},{"id":"ownerhip_2","percentage":0.50}]}`
-	errorMessage := "Total Percentage can not be greater than or less than 1. Your total percentage ="
 
 	invalidArgs := getThreeArgLedgerArray(propertyTransaction, property_1, tooLowOwnerPercentage)
+	msg := " | " + propertyTransaction + " with args: {" + string(invalidArgs[1]) + "," + string(invalidArgs[2]) + "}, did not fail. "
 
 	res := stub.MockInvoke(propertyTransaction, invalidArgs)
-	output:= " PropertyTransaction " + property_1 + " did not fail | " + string(res.Message)
 	if res.Status != errorStatus {
-		fmt.Println(output)
+		msg := msg +  "[res.Status=" + strconv.FormatInt(int64(res.Status), 10) + "]"
+		fmt.Println(msg)
 		t.FailNow()
 	}
-	if !strings.Contains(res.Message, errorMessage) {
-		fmt.Println(output)
+	if !strings.Contains(res.Message, createPropertyTransactionTotalPercentageOfOneError) {
+		msg := msg + "[res.Message=" + string(res.Message) + "]"
+		fmt.Println(msg)
 		t.FailNow()
 	}
 
@@ -322,18 +354,19 @@ func TestPropertyTransactionTooHighTotalOwnerPercentage(t *testing.T) {
 	stub := getStub()
 
 	tooHighOwnerPercentage := `{"saleDate":"2017-06-28T21:57:16","salePrice":1000,"owners":[{"id":"ownership_3","percentage":0.45},{"id":"ownerhip_2","percentage":0.70}]}`
-	errorMessage := "Total Percentage can not be greater than or less than 1. Your total percentage ="
 
 	invalidArgs := getThreeArgLedgerArray(propertyTransaction, property_1, tooHighOwnerPercentage)
+	msg := " | " + propertyTransaction + " with args: {" + string(invalidArgs[1]) + "," + string(invalidArgs[2]) + "}, did not fail. "
 
 	res := stub.MockInvoke(propertyTransaction, invalidArgs)
-	output:= " PropertyTransaction " + property_1 + " did not fail | " + string(res.Message)
 	if res.Status != errorStatus {
-		fmt.Println(output)
+		msg := msg +  "[res.Status=" + strconv.FormatInt(int64(res.Status), 10) + "]"
+		fmt.Println(msg)
 		t.FailNow()
 	}
-	if !strings.Contains(res.Message, errorMessage) {
-		fmt.Println(output)
+	if !strings.Contains(res.Message, createPropertyTransactionTotalPercentageOfOneError) {
+		msg := msg + "[res.Message=" + string(res.Message) + "]"
+		fmt.Println(msg)
 		t.FailNow()
 	}
 
@@ -354,8 +387,8 @@ func TestGetProperty(t *testing.T){
 
 }
 
+//TODO fix error message
 func checkInvokeOwnership(t *testing.T, stub *shim.MockStub, ownership TestAttribute) {
-
 
 	ownershipArgs := getThreeArgLedgerArray(createOwnership, ownership.Key, ownership.Value)
 
@@ -364,9 +397,9 @@ func checkInvokeOwnership(t *testing.T, stub *shim.MockStub, ownership TestAttri
 		fmt.Println(" InvokeOwnership", ownership, "failed", string(res.Message))
 		t.FailNow()
 	}
-
 }
 
+//TODO fix error message
 func checkOwnershipState(t *testing.T, stub *shim.MockStub, ownership TestAttribute) {
 
 	bytes := stub.State[ownership.Key]
@@ -381,6 +414,7 @@ func checkOwnershipState(t *testing.T, stub *shim.MockStub, ownership TestAttrib
 
 }
 
+//TODO fix error message
 func checkGetOwnership(t *testing.T, stub *shim.MockStub, ownership TestAttribute){
 
 	ownershipArgs := getTwoArgLedgerArray(getOwnership, ownership.Key)
@@ -401,6 +435,7 @@ func checkGetOwnership(t *testing.T, stub *shim.MockStub, ownership TestAttribut
 
 }
 
+//=====================================================================================================================================================================
 func checkGetOwnershipInvalid(t *testing.T, stub *shim.MockStub, ownership TestAttribute){
 
 	ownershipArgs := getTwoArgLedgerArray(getOwnership, ownership.Key)
@@ -421,6 +456,7 @@ func checkGetOwnershipInvalid(t *testing.T, stub *shim.MockStub, ownership TestA
 
 }
 
+//TODO fix error message
 func checkPropertyTransaction(t *testing.T, stub *shim.MockStub, property TestAttribute){
 
 	propertyArgs := getThreeArgLedgerArray(propertyTransaction, property.Key, property.Value)
@@ -433,6 +469,7 @@ func checkPropertyTransaction(t *testing.T, stub *shim.MockStub, property TestAt
 
 }
 
+//TODO fix error message
 func checkPropertyState(t *testing.T, stub *shim.MockStub, property TestAttribute) {
 
 	bytes := stub.State[property.Key]
@@ -447,6 +484,7 @@ func checkPropertyState(t *testing.T, stub *shim.MockStub, property TestAttribut
 
 }
 
+//TODO fix error message
 func checkGetProperty(t *testing.T, stub *shim.MockStub, property TestAttribute){
 
 	propertyArgs := getTwoArgLedgerArray(getProperty, property.Key)
@@ -542,6 +580,17 @@ func getTwoArgLedgerArray(function string, id string) ([][]byte) {
 	args := [][]byte{method, key}
 
 	return args
+}
+
+func getValidOwners() ([]string) {
+
+	owner1 := `"id":"ownership_3","percentage":0.45`
+	owner2 := `"id":"ownership_2","percentage":0.55`
+
+	owners := []string{owner1, owner2}
+
+	return owners
+
 }
 
 func getStub() (*shim.MockStub){
