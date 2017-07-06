@@ -25,6 +25,7 @@ package main
 import (
 	"fmt"
 	"errors"
+    "strings"
 
 	"github.com/hyperledger/fabric/core/chaincode/shim"
 	pb "github.com/hyperledger/fabric/protos/peer"
@@ -82,7 +83,9 @@ func (t *SimpleChaincode) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
 		return t.vote(stub, args)
 	} else if function == "changeStatusToZero" {
 		return t.changeStatusToZero(stub, args)
-	}
+	} else if function == "addNewActivePollToManyUsers"{
+        return t.addNewActivePollToManyUsers(stub,args)
+    }
 
 	return shim.Error("Invalid invoke function name. Expecting \"move\" \"delete\" \"query\" \"findAll\"")
 }
@@ -96,6 +99,7 @@ func (t *SimpleChaincode) Init(stub shim.ChaincodeStubInterface) pb.Response {
 
 
 //peer chaincode invoke -o orderer.example.com:7050 -C mychannel -n mycc -c '{"Args":["addUser","c"]}'
+//peer chaincode invoke -o orderer.example.com:7050 -C mychannel -n mycc -c '{"Args":["addUser","d"]}'
 func (t *SimpleChaincode) addUser(stub shim.ChaincodeStubInterface, args []string) pb.Response {
 	var user User 
 	var userAsJsonByteArray []byte
@@ -166,7 +170,6 @@ func (t *SimpleChaincode) newQuery(stub shim.ChaincodeStubInterface, args []stri
     if err != nil{
         return shim.Error(err.Error())
     }
-//"{\"Options\":[{\"Name\":\"opt1\",\"Count\":0},{\"Name\":\"opt2\",\"Count\":0}],\"status\":1}"
     if(poll.Status==1){
         pollAsStringIfStatusOne = "{\"options\":["
         for i := 0; i < len(poll.Options); i++ {
@@ -264,6 +267,78 @@ func (t *SimpleChaincode) addNewActivePollToUser(stub shim.ChaincodeStubInterfac
 	}
 
 	return shim.Success(nil)
+}
+
+//peer chaincode invoke -o orderer.example.com:7050 -C mychannel -n mycc -c '{"Args":["addNewActivePollToManyUsers","c,d","my_poll0"]}'
+func (t *SimpleChaincode) addNewActivePollToManyUsers(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+    var s string
+    var pollKey string
+    var key string
+    var err error
+    var user User 
+    var userAsJsonByteArray []byte
+    var userAsJsonString string
+    var userExists, pollExists, pollAlreadyAddToUser bool
+    var pollToAdd ActivePoll
+
+    if len(args) < 2 {
+        return shim.Error("put operation must include two arguments")
+    }
+    s = args[0]
+    pollKey = args[1]
+
+    users := strings.Split(s, ",")
+
+    pollExists, err = isExistingPoll(stub, pollKey)
+    if pollExists==false{
+        return shim.Error("No poll with name:" + pollKey)
+    }
+
+    pollToAdd,err = createActivePoll(pollKey)
+    if err != nil{
+        return shim.Error(err.Error())
+    }
+
+    for k := 0; k< len(users); k++{
+        userExists, err = isExistingUser(stub, users[k])
+        if err != nil {
+            return shim.Error(err.Error())
+        }
+        if userExists==false {
+            return shim.Error("No user with id:" + users[k])
+        }
+    }
+
+    for i := 0; i < len(users); i++ {
+        key = users[i]
+
+        userAsBytes, err := stub.GetState(key)
+        if err != nil{
+            return shim.Error(err.Error())
+        }
+        user, err = getUserFromJsonByteArray(userAsBytes)
+        if err != nil{
+            return shim.Error(err.Error())
+        }
+
+        pollAlreadyAddToUser, err = isPollAlreadyAddToUser(stub, key, pollKey)
+        if pollAlreadyAddToUser==true {
+            return shim.Error("this poll: " + pollKey + " has already been add to the user: " +key)
+        }
+
+        user.Active = append(user.Active,pollToAdd)
+        userAsJsonByteArray, err = getUserAsJsonByteArray(user)
+        if err != nil{
+            return shim.Error(err.Error())
+        }
+        userAsJsonString = string(userAsJsonByteArray)
+        err = stub.PutState(key, []byte(userAsJsonString))
+        if err != nil {
+            return shim.Error(err.Error())
+        }
+    }
+
+    return shim.Success(nil)
 }
 
 //peer chaincode invoke -o orderer.example.com:7050 -C mychannel -n mycc -c '{"Args":["activeToInactivePoll","c","my_poll0"]}'

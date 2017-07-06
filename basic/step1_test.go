@@ -83,6 +83,22 @@ func checkAddNewActivePollToUser(t *testing.T, stub *shim.MockStub, args [][]byt
 	}
 }
 
+func checkAddNewActivePollToManyUsers(t *testing.T, stub *shim.MockStub, args [][]byte) {
+	res := stub.MockInvoke("1", args)
+	if res.Status != shim.OK {
+		fmt.Println("AddNewActivePollToManyUsers", args, "failed", string(res.Message))
+		t.FailNow()
+	}
+}
+
+func checkAddNewActivePollToManyUsers_OneUserDoesNotExist(t *testing.T, stub *shim.MockStub, args [][]byte) {
+	res := stub.MockInvoke("1", args)
+	if res.Status != shim.ERROR {
+		fmt.Println("AddNewActivePollToManyUsers_OneUserDoesNotExist", args, "failed", string(res.Message))
+		t.FailNow()
+	}
+}
+
 func checkAddNewActivePollToUser_NoPoll(t *testing.T, stub *shim.MockStub, args [][]byte) {
 	res := stub.MockInvoke("1", args)
 	if res.Status != shim.ERROR {
@@ -271,6 +287,30 @@ func TestExample02_AddNewActivePollToUser(t *testing.T) {
 	checkAddUser(t, stub, [][]byte{[]byte("addUser"), []byte("c")})
 	checkAddNewActivePollToUser(t, stub, [][]byte{[]byte("addNewActivePollToUser"),[]byte("c"), []byte("mypoll")})
 	checkNewQuery(t, stub, "c", "{\"active\":[{\"name\":\"mypoll\",\"token\":1}],\"inactive\":[]}")
+}
+
+func TestExample02_AddNewActivePollToManyUsers(t *testing.T) {
+	scc := new(SimpleChaincode)
+	stub := shim.NewMockStub("ex02", scc)
+
+	checkAddNewPoll(t, stub, [][]byte{[]byte("addNewPoll"), []byte("mypoll"), []byte("{\"Options\":[{\"Name\":\"opt1\",\"Count\":0},{\"Name\":\"opt2\",\"Count\":0}],\"status\":1}")})
+	checkAddUser(t, stub, [][]byte{[]byte("addUser"), []byte("c")})
+	checkAddUser(t, stub, [][]byte{[]byte("addUser"), []byte("d")})
+	checkAddNewActivePollToManyUsers(t, stub, [][]byte{[]byte("addNewActivePollToManyUsers"),[]byte("c,d"), []byte("mypoll")})
+	checkNewQuery(t, stub, "c", "{\"active\":[{\"name\":\"mypoll\",\"token\":1}],\"inactive\":[]}")
+	checkNewQuery(t, stub, "d", "{\"active\":[{\"name\":\"mypoll\",\"token\":1}],\"inactive\":[]}")
+}
+
+func TestExample02_AddNewActivePollToManyUsers_OneUserDoesNotExist(t *testing.T) {
+	scc := new(SimpleChaincode)
+	stub := shim.NewMockStub("ex02", scc)
+
+	checkAddNewPoll(t, stub, [][]byte{[]byte("addNewPoll"), []byte("mypoll"), []byte("{\"Options\":[{\"Name\":\"opt1\",\"Count\":0},{\"Name\":\"opt2\",\"Count\":0}],\"status\":1}")})
+	checkAddUser(t, stub, [][]byte{[]byte("addUser"), []byte("c")})
+	checkAddUser(t, stub, [][]byte{[]byte("addUser"), []byte("d")})
+	checkAddNewActivePollToManyUsers_OneUserDoesNotExist(t, stub, [][]byte{[]byte("addNewActivePollToManyUsers"),[]byte("c,e,d"), []byte("mypoll")})
+	checkNewQuery(t, stub, "c", "{\"active\":[],\"inactive\":[]}")
+	checkNewQuery(t, stub, "d", "{\"active\":[],\"inactive\":[]}")
 }
 
 func TestExample02_AddNewActivePollToUser_NoPoll(t *testing.T) {
