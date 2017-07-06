@@ -54,9 +54,7 @@ func (t *Chaincode) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
 
 	fmt.Printf("Invoke")
 	function, args := stub.GetFunctionAndParameters()
-	if function == "createOwnership" {
-		return t.createOwnership(stub, args)
-	} else if function == "getOwnership" {
+	if function == "getOwnership" {
 		return t.getOwnership(stub, args)
 	} else if function == "getOwnershipHistory" {
 		return t.getOwnershipHistory(stub, args)
@@ -69,32 +67,6 @@ func (t *Chaincode) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
 	}
 
 	return shim.Error("Invalid invoke function name. Expecting \"createOwnership\"  \"getOwnership\" \"getOwnershipHistory\" \"propertyTransaction\" \"getProperty\" \"getPropertyHistory\"")
-
-}
-
-func (t *Chaincode) createOwnership(stub shim.ChaincodeStubInterface, args []string) pb.Response {
-
-	var err error
-	if len(args) != 2 {
-		return shim.Error("Incorrect number of arguments. Expecting ownership id and properties")
-	}
-
-	ownershipId := args[0]
-	ownershipString := args[1]
-
-	ownership := Ownership{}
-	err = json.Unmarshal([]byte(ownershipString), &ownership)
-	if err != nil {
-		err := errors.New("Unable to convert json to Ownership struct | " + err.Error())
-		return shim.Error(err.Error())
-	}
-
-	err = addOwnershipToLedger(stub, ownershipId, ownership)
-	if err != nil {
-		return shim.Error(err.Error())
-	}
-
-	return shim.Success(nil)
 
 }
 
@@ -226,25 +198,6 @@ func (t *Chaincode) getPropertyHistory(stub shim.ChaincodeStubInterface, args []
 	}
 
 	return shim.Success(buffer)
-
-}
-
-func addOwnershipToLedger(stub shim.ChaincodeStubInterface, ownershipId string, ownership Ownership) (error){
-
-	var err error
-
-	ownershipAsBytes, err := getOwnershipAsBytes(ownership)
-	if err != nil {
-		return err
-	}
-
-	err = stub.PutState(ownershipId, ownershipAsBytes)
-	if err != nil {
-		err = errors.New("Unable to add " + ownershipId + " to ledger |" + err.Error())
-		return err
-	}
-
-	return err
 
 }
 
