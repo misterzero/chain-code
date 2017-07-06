@@ -340,9 +340,9 @@ func TestExample02_Vote(t *testing.T) {
 	checkAddUser(t, stub, [][]byte{[]byte("addUser"), []byte("c")})
 	checkAddNewActivePollToUser(t, stub, [][]byte{[]byte("addNewActivePollToUser"),[]byte("c"), []byte("mypoll")})
 	checkVote(t, stub, [][]byte{[]byte("vote"),[]byte("c"), []byte("mypoll"), []byte("opt1")})
-
+	checkChangeStatusToZero(t, stub, [][]byte{[]byte("changeStatusToZero"), []byte("mypoll")})
 	checkNewQuery(t, stub, "c", "{\"active\":[{\"name\":\"mypoll\",\"token\":0}],\"inactive\":[]}")
-	checkNewQuery(t, stub, "mypoll", "{\"options\":[{\"name\":\"opt1\",\"count\":1},{\"name\":\"opt2\",\"count\":0}],\"status\":1}")
+	checkNewQuery(t, stub, "mypoll", "{\"options\":[{\"name\":\"opt1\",\"count\":1},{\"name\":\"opt2\",\"count\":0}],\"status\":0}")
 }
 
 func TestExample02_Vote_NoUser(t *testing.T) {
@@ -406,7 +406,8 @@ func TestExample02_Vote_HasAlreadyVoted(t *testing.T) {
 	checkVote(t, stub, [][]byte{[]byte("vote"),[]byte("c"), []byte("mypoll"), []byte("opt1")})
 	checkVote_HasAlreadyVoted(t, stub, [][]byte{[]byte("vote"),[]byte("c"), []byte("mypoll"), []byte("opt1")})
 	checkNewQuery(t, stub, "c", "{\"active\":[{\"name\":\"mypoll\",\"token\":0}],\"inactive\":[]}")
-	checkNewQuery(t, stub, "mypoll", "{\"options\":[{\"name\":\"opt1\",\"count\":1},{\"name\":\"opt2\",\"count\":0}],\"status\":1}")
+	checkChangeStatusToZero(t, stub, [][]byte{[]byte("changeStatusToZero"), []byte("mypoll")})
+	checkNewQuery(t, stub, "mypoll", "{\"options\":[{\"name\":\"opt1\",\"count\":1},{\"name\":\"opt2\",\"count\":0}],\"status\":0}")
 }
 
 func TestExample02_Vote_NoOption(t *testing.T) {
