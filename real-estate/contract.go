@@ -32,13 +32,43 @@ type Ownership struct {
 	Properties		[]Attribute		`json:"properties"`
 }
 
+//implement two new fields?
+//when return history, need to be returning a []Property?
+
+//The PropertyTransaction will be used for the history of a property (only)
+//	- still using Property as before
 type Property struct {
+	//TxID		not used in ledger
+	//PropertyId	not used in ledger
 	SaleDate		string			`json:"saleDate"`
 	SalePrice	        float64 		`json:"salePrice"`
 	Owners 			[]Attribute 		`json:"owners"`
 }
 
+//TODO use PropertyTransaction unpackage history of Property into it
+type PropertyTransaction struct {
+	TxId			string			`json:"txid"`
+	PropertyId		string			`json:"id"`
+	SaleDate		string			`json:"saleDate"`
+	SalePrice		float64			`json:"percentage"`
+	Owners			[]Attribute		`json:"owners"`
+}
+
+//TODO use OwnershipTransaction, unpackage history of Ownership
+type OwnershipTransaction struct{
+	//TxId			string			`json:"txid"`
+	Properties		[]OwnershipAttribute	`json:"properties"`
+}
+
+//TODO only use with Property
 type Attribute struct {
+	Id			string			`json:"id"`
+	Percentage 		float64			`json:"percentage, string"`
+}
+
+//TODO, this is really the ownershipTransactions
+type OwnershipAttribute struct {
+	TxId			string			`json:txid`
 	Id			string			`json:"id"`
 	Percentage 		float64			`json:"percentage, string"`
 }
