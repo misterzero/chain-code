@@ -31,18 +31,27 @@ type TestAttribute struct {
 	Value	string
 }
 
+//Arguments
 const getOwnership = "getOwnership"
 const propertyTransaction = "propertyTransaction"
 const getProperty = "getProperty"
+
+//Keys
 const ownership_1 = "ownership_1"
 const ownership_3 = "ownership_3"
 const property_1 = "property_1"
+
+//Values
 const dateString = `"2017-06-28T21:57:16"`
 const emptyOwnershipPropertyJson = `{"properties":[]}`
 const emptyPropertyJson = `{"saleDate":"","salePrice":0,"owners":[]}`
+
 const errorStatus = int32(500)
 
+//Error messages
+const invalidArgumentError = `Invalid invoke function name. Expecting "createOwnership"  "getOwnership" "getOwnershipHistory" "propertyTransaction" "getProperty" "getPropertyHistory"`
 const getOwnershipArgError = "Incorrect number of arguments. Expecting ownership id to query"
+const getPropertyArgError = "Incorrect number of arguments. Expecting property id to query"
 const getOwnershipMissingError = "Nil value for ownershipId:"
 const getOwnershipNilError = "Nil value for ownershipId:"
 const getPropertyNilError = "Nil amount for"
@@ -52,7 +61,16 @@ const createPropertyTransactionMissingSaleDateError = "A sale date is required."
 const createPropertyTransactionGreaterThanZeroSalePriceError = "The sale price must be greater than 0"
 const createPropertyTransactionTotalPercentageOfOneError = "Total Percentage can not be greater than or less than 1. Your total percentage ="
 const createPropertyTransactionNoOwnersError = "At least one owner is required."
-const getPropertyArgError = "Incorrect number of arguments. Expecting property id to query"
+
+func TestGetInvalidArgument(t *testing.T){
+	stub := getStub()
+
+	invalidArgs := getTwoArgLedgerArray(ownership_1, getOwnership)
+	message := " | " + ownership_1 + " with args: {" + string(invalidArgs[1]) + "}, did not fail. "
+
+	handleExpectedFailures(t, stub, ownership_1, message, invalidArgumentError, invalidArgs, emptyOwnershipPropertyJson)
+
+}
 
 func TestGetOwnershipMissingOwnership(t *testing.T){
 
@@ -62,6 +80,7 @@ func TestGetOwnershipMissingOwnership(t *testing.T){
 	message := " | " + getOwnership + " with args: {" + string(invalidArgs[1]) + "}, did not fail. "
 
 	handleExpectedFailures(t, stub, getOwnership, message, getOwnershipMissingError, invalidArgs, emptyOwnershipPropertyJson)
+
 }
 
 func TestGetOwnershipExtraArgs(t *testing.T){
