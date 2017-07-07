@@ -14,6 +14,20 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+//implement two new fields?
+//when return history, need to be returning a []Property?
+
+//The PropertyTransaction will be used for the history of a property (only)
+//	- still using Property to add and get (not history)
+//	- will want to unpackage a getPropertyHistory into a PropertyTransaction struct
+//The OwnershipTransaction will be used for the history of an ownership (only)
+//	- still using Ownership to add and get (not history)
+//	- will wanst to unpackage a getOwnershipHistory into a OwnershipTransaction struct
+// 	- TODO, determine how to restructure Ownership to use []OwnershipAttribute
+//The Property object will accept a TxId and PropertyId, but will not do anything with it
+//	- TODO, need to figure out how to get the TxId so it can be return for a get
+//The Attribute struct is only used with the Property struct now
+//	- TODO, rename Attribute
 package main
 
 import (
@@ -28,15 +42,6 @@ import (
 
 type Chaincode struct {}
 
-type Ownership struct {
-	Properties		[]Attribute		`json:"properties"`
-}
-
-//implement two new fields?
-//when return history, need to be returning a []Property?
-
-//The PropertyTransaction will be used for the history of a property (only)
-//	- still using Property as before
 type Property struct {
 	//TxID		not used in ledger
 	//PropertyId	not used in ledger
@@ -45,7 +50,6 @@ type Property struct {
 	Owners 			[]Attribute 		`json:"owners"`
 }
 
-//TODO use PropertyTransaction unpackage history of Property into it
 type PropertyTransaction struct {
 	TxId			string			`json:"txid"`
 	PropertyId		string			`json:"id"`
@@ -54,23 +58,22 @@ type PropertyTransaction struct {
 	Owners			[]Attribute		`json:"owners"`
 }
 
-//TODO use OwnershipTransaction, unpackage history of Ownership
-type OwnershipTransaction struct{
-	//TxId			string			`json:"txid"`
-	Properties		[]OwnershipAttribute	`json:"properties"`
+type OwnershipHistory struct{
+	History			[]OwnershipAttribute	`json:"ownershipHistory"`
 }
 
-//TODO only use with Property
+type OwnershipAttribute struct {
+	TxId			string			`json:"txid"`
+	Ownership		Ownership		`json:"ownership"`
+}
+
+type Ownership struct {
+	Properties		[]Attribute		`json:"properties"`
+}
+
 type Attribute struct {
 	Id			string			`json:"id"`
-	Percentage 		float64			`json:"percentage, string"`
-}
-
-//TODO, this is really the ownershipTransactions
-type OwnershipAttribute struct {
-	TxId			string			`json:txid`
-	Id			string			`json:"id"`
-	Percentage 		float64			`json:"percentage, string"`
+	Percentage 		float64			`json:"percentage"`
 }
 
 func (t *Chaincode) Init(stub shim.ChaincodeStubInterface) pb.Response {
@@ -126,7 +129,7 @@ func (t *Chaincode) getOwnershipHistory(stub shim.ChaincodeStubInterface, args [
 		return shim.Error("Incorrect number of arguments. Expecting 1")
 	}
 
-	buffer, err := getHistory(stub, args[0], "ownership")
+	buffer, err := getAllOwnershipHistory(stub, args[0])
 	if err != nil {
 		return shim.Error(err.Error())
 	}
@@ -371,9 +374,9 @@ func getHistory(stub shim.ChaincodeStubInterface, id string, historyType string)
 		buffer.WriteString("\"")
 
 		if historyType == "ownership"{
-			historyMessage = ", \"Ownership\":"
+			historyMessage = ", \"ownership\":"
 		} else if historyType == "property" {
-			historyMessage = ", \"Property\":"
+			historyMessage = ", \"property\":"
 		}
 
 		buffer.WriteString(historyMessage)
@@ -394,6 +397,48 @@ func getHistory(stub shim.ChaincodeStubInterface, id string, historyType string)
 	buffer.WriteString("]")
 
 	return buffer.Bytes(), err
+
+}
+
+func getAllOwnershipHistory(stub shim.ChaincodeStubInterface, id string) ([]byte, error){
+
+	var empty []byte
+	var ownershipHistory = OwnershipHistory{}
+
+	resultsIterator, err := stub.GetHistoryForKey(id)
+	if err != nil {
+		err = errors.New("Unable to get history for key: " + id + " | "+ err.Error())
+		return empty, err
+	}
+
+	defer resultsIterator.Close()
+
+	for resultsIterator.HasNext() {
+
+		response, err := resultsIterator.Next()
+		if err != nil {
+			return empty, err
+		}
+
+		ownershipAttribute := OwnershipAttribute{}
+		ownershipAttribute.TxId = response.TxId
+
+
+		err = json.Unmarshal(response.Value, &ownershipAttribute.Ownership)
+		if err != nil {
+			return empty, err
+		}
+
+		ownershipHistory.History = append(ownershipHistory.History, ownershipAttribute)
+
+	}
+
+	jsonOwnershipTransaction, err := json.Marshal(ownershipHistory)
+	if err != nil {
+		return empty, err
+	}
+
+	return jsonOwnershipTransaction, err
 
 }
 
