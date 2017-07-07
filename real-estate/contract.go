@@ -34,12 +34,6 @@ type Ownership struct {
 }
 
 type Property struct {
-	SaleDate		string			`json:"saleDate"`
-	SalePrice	        float64 		`json:"salePrice"`
-	Owners 			[]Attribute 		`json:"owners"`
-}
-
-type Property2 struct {
 	TxId			string			`json:"txid"`
 	PropertyId		string			`json:"id"`
 	SaleDate		string			`json:"saleDate"`
@@ -175,59 +169,6 @@ func (t *Chaincode) getOwnershipHistory(stub shim.ChaincodeStubInterface, args [
 
 }
 
-//func (t *Chaincode) propertyTransaction(stub shim.ChaincodeStubInterface, args []string) pb.Response {
-//
-//	var propertyId string
-//	var propertyString string
-//	var err error
-//
-//	if len(args) != 2 {
-//		return shim.Error("Incorrect number of arguments. Expecting 2")
-//	}
-//
-//	propertyId = args[0]
-//	propertyString = args[1]
-//
-//	property := Property{}
-//	err = json.Unmarshal([]byte(propertyString), &property)
-//	if err != nil {
-//		return shim.Error(err.Error())
-//	}
-//
-//	err = verifyValidProperty(property)
-//	if err != nil {
-//		return shim.Error(err.Error())
-//	}
-//
-//	propertyOwnership, err := getOwnershipPropertyUpdateRequirements(stub, property.Owners)
-//	if err != nil {
-//		return shim.Error(err.Error())
-//	}
-//
-//	err = confirmValidPercentage(property.Owners)
-//	if err != nil {
-//		return shim.Error(err.Error())
-//	}
-//
-//	propertyAsBytes, err := getPropertyAsBytes(property)
-//	if err != nil {
-//		return shim.Error(err.Error())
-//	}
-//
-//	err = stub.PutState(propertyId, propertyAsBytes)
-//	if err != nil {
-//		return shim.Error(err.Error())
-//	}
-//
-//	err = updateOwnershipProperties(stub, propertyId, propertyOwnership)
-//	if err != nil {
-//		return shim.Error(err.Error())
-//	}
-//
-//	return shim.Success(nil)
-//
-//}
-
 func (t *Chaincode) propertyTransaction(stub shim.ChaincodeStubInterface, args []string) pb.Response {
 
 	var propertyId string
@@ -241,7 +182,7 @@ func (t *Chaincode) propertyTransaction(stub shim.ChaincodeStubInterface, args [
 	propertyId = args[0]
 	propertyString = args[1]
 
-	property := Property2{}
+	property := Property{}
 	property.TxId = stub.GetTxID()
 	err = json.Unmarshal([]byte(propertyString), &property)
 	if err != nil {
@@ -309,21 +250,6 @@ func (t *Chaincode) getProperty(stub shim.ChaincodeStubInterface, args []string)
 	return shim.Success(propertyBytes)
 
 }
-
-//func (t *Chaincode) getPropertyHistory(stub shim.ChaincodeStubInterface, args []string) pb.Response {
-//
-//	if len(args) != 1 {
-//		return shim.Error("Incorrect number of arguments. Expecting 1")
-//	}
-//
-//	buffer, err := getHistory(stub, args[0], "property")
-//	if err != nil {
-//		return shim.Error(err.Error())
-//	}
-//
-//	return shim.Success(buffer)
-//
-//}
 
 func (t *Chaincode) getPropertyHistory(stub shim.ChaincodeStubInterface, args []string) pb.Response {
 
@@ -460,21 +386,7 @@ func updateOwnershipProperties(stub shim.ChaincodeStubInterface, propertyId stri
 
 }
 
-//func getPropertyAsBytes(property Property) ([]byte, error){
-//
-//	var propertyBytes []byte
-//	var err error
-//
-//	propertyBytes, err = json.Marshal(property)
-//	if err != nil{
-//		err = errors.New("Unable to convert property to json string " + string(propertyBytes))
-//	}
-//
-//	return propertyBytes, err
-//
-//}
-
-func getPropertyAsBytes(property Property2) ([]byte, error){
+func getPropertyAsBytes(property Property) ([]byte, error){
 
 	var propertyBytes []byte
 	var err error
@@ -502,146 +414,7 @@ func getOwnershipAsBytes(ownership Ownership) ([]byte, error){
 
 }
 
-//func getHistory(stub shim.ChaincodeStubInterface, id string, historyType string) ([]byte, error){
-//
-//	var empty []byte
-//	resultsIterator, err := stub.GetHistoryForKey(id)
-//	if err != nil {
-//		err = errors.New("Unable to get history for key: " + id + " | "+ err.Error())
-//		return empty, err
-//	}
-//
-//	defer resultsIterator.Close()
-//
-//	var buffer bytes.Buffer
-//	var historyMessage string
-//	buffer.WriteString("[")
-//	bArrayMemberAlreadyWritten := false
-//
-//	for resultsIterator.HasNext() {
-//
-//		response, err := resultsIterator.Next()
-//		if err != nil {
-//			return empty, err
-//		}
-//
-//		// Add a comma before array members, suppress it for the first array member
-//		if bArrayMemberAlreadyWritten == true {
-//			buffer.WriteString(",")
-//		}
-//		buffer.WriteString("{\"TxId\":")
-//		buffer.WriteString("\"")
-//		buffer.WriteString(response.TxId)
-//		buffer.WriteString("\"")
-//
-//		if historyType == "ownership"{
-//			historyMessage = ", \"Ownership\":"
-//		} else if historyType == "property" {
-//			historyMessage = ", \"Property\":"
-//		}
-//
-//		buffer.WriteString(historyMessage)
-//
-//		// if it was a delete operation on given key, then we need to set the
-//		//corresponding value null. Else, we will write the response.Value
-//		//as-is (as the Value itself a JSON property)
-//		if response.IsDelete {
-//			buffer.WriteString("null")
-//		} else {
-//			buffer.WriteString(string(response.Value))
-//		}
-//
-//		buffer.WriteString("}")
-//
-//		bArrayMemberAlreadyWritten = true
-//	}
-//
-//	buffer.WriteString("]")
-//
-//	return buffer.Bytes(), err
-//
-//}
-
-func getHistory(stub shim.ChaincodeStubInterface, id string, historyType string) ([]byte, error){
-
-	var empty []byte
-	resultsIterator, err := stub.GetHistoryForKey(id)
-	if err != nil {
-		err = errors.New("Unable to get history for key: " + id + " | "+ err.Error())
-		return empty, err
-	}
-
-	defer resultsIterator.Close()
-
-	var buffer bytes.Buffer
-	var historyMessage string
-	buffer.WriteString("[")
-	bArrayMemberAlreadyWritten := false
-
-	for resultsIterator.HasNext() {
-
-		response, err := resultsIterator.Next()
-		if err != nil {
-			return empty, err
-		}
-
-		// Add a comma before array members, suppress it for the first array member
-		if bArrayMemberAlreadyWritten == true {
-			buffer.WriteString(",")
-		}
-		buffer.WriteString("{\"TxId\":")
-		buffer.WriteString("\"")
-		buffer.WriteString(response.TxId)
-		buffer.WriteString("\"")
-
-		if historyType == "ownership"{
-			historyMessage = ", \"Ownership\":"
-		} else if historyType == "property" {
-			historyMessage = ", \"Property\":"
-		}
-
-		buffer.WriteString(historyMessage)
-
-		// if it was a delete operation on given key, then we need to set the
-		//corresponding value null. Else, we will write the response.Value
-		//as-is (as the Value itself a JSON property)
-		if response.IsDelete {
-			buffer.WriteString("null")
-		} else {
-			buffer.WriteString(string(response.Value))
-		}
-
-		buffer.WriteString("}")
-
-		bArrayMemberAlreadyWritten = true
-	}
-
-	buffer.WriteString("]")
-
-	return buffer.Bytes(), err
-
-}
-
-//func verifyValidProperty(property Property) (error){
-//
-//	var err error
-//
-//	if strings.TrimSpace(property.SaleDate) == "" {
-//		err = errors.New("A sale date is required.")
-//		return err
-//	}
-//	if property.SalePrice < 1 {
-//		err = errors.New("The sale price must be greater than 0.")
-//		return err
-//	}
-//	if len(property.Owners) < 1 {
-//		err = errors.New("At least one owner is required.")
-//	}
-//
-//	return err
-//}
-
-func verifyValidProperty(property Property2) (error){
+func verifyValidProperty(property Property) (error){
 
 	var err error
 
@@ -684,8 +457,5 @@ func main() {
 	if err != nil {
 		fmt.Printf("Error starting Simple chaincode: %s", err)
 	}
-
-	buildPropertyJson()
-	buildOwnershipJson()
 
 }
