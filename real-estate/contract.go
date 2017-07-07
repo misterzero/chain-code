@@ -139,7 +139,7 @@ func (t *Chaincode) getOwnershipHistory(stub shim.ChaincodeStubInterface, args [
 				return shim.Error(err.Error())
 			}
 
-			buffer.WriteString("\"properties\":[")
+			buffer.WriteString("\"Ownership\":[")
 			for i := 0; i < len(ownership.Properties); i++ {
 				buffer.WriteString("{")
 				buffer.WriteString("\"id\":\"")
