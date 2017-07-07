@@ -93,6 +93,10 @@ func (t *Chaincode) getOwnership(stub shim.ChaincodeStubInterface, args []string
 
 func (t *Chaincode) getOwnershipHistory(stub shim.ChaincodeStubInterface, args []string) pb.Response {
 
+	if len(args) != 1 {
+		return shim.Error("Incorrect number of arguments. Expecting 1")
+	}
+
 	id := args[0]
 	resultsIterator, err := stub.GetHistoryForKey(id)
 	if err != nil {
