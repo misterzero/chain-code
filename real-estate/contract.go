@@ -20,14 +20,8 @@ limitations under the License.
 //The PropertyTransaction will be used for the history of a property (only)
 //	- still using Property to add and get (not history)
 //	- will want to unpackage a getPropertyHistory into a PropertyTransaction struct
-//The OwnershipTransaction will be used for the history of an ownership (only)
-//	- still using Ownership to add and get (not history)
-//	- will wanst to unpackage a getOwnershipHistory into a OwnershipTransaction struct
-// 	- TODO, determine how to restructure Ownership to use []OwnershipAttribute
 //The Property object will accept a TxId and PropertyId, but will not do anything with it
 //	- TODO, need to figure out how to get the TxId so it can be return for a get
-//The Attribute struct is only used with the Property struct now
-//	- TODO, rename Attribute
 package main
 
 import (
@@ -129,12 +123,44 @@ func (t *Chaincode) getOwnershipHistory(stub shim.ChaincodeStubInterface, args [
 		return shim.Error("Incorrect number of arguments. Expecting 1")
 	}
 
-	buffer, err := getAllOwnershipHistory(stub, args[0])
+	var ownershipHistory = OwnershipHistory{}
+	id := args[0]
+
+	resultsIterator, err := stub.GetHistoryForKey(id)
+	if err != nil {
+		err = errors.New("Unable to get history for key: " + id + " | "+ err.Error())
+		return shim.Error(err.Error())
+	}
+
+	defer resultsIterator.Close()
+
+	for resultsIterator.HasNext() {
+
+		response, err := resultsIterator.Next()
+		if err != nil {
+			return shim.Error(err.Error())
+		}
+
+		ownershipAttribute := OwnershipAttribute{}
+		ownershipAttribute.TxId = response.TxId
+
+
+		err = json.Unmarshal(response.Value, &ownershipAttribute.Ownership)
+		if err != nil {
+			return shim.Error(err.Error())
+		}
+
+		ownershipHistory.History = append(ownershipHistory.History, ownershipAttribute)
+
+	}
+
+	jsonOwnershipTransaction, err := json.Marshal(ownershipHistory)
 	if err != nil {
 		return shim.Error(err.Error())
 	}
 
-	return shim.Success(buffer)
+
+	return shim.Success(jsonOwnershipTransaction)
 
 }
 
@@ -397,48 +423,6 @@ func getHistory(stub shim.ChaincodeStubInterface, id string, historyType string)
 	buffer.WriteString("]")
 
 	return buffer.Bytes(), err
-
-}
-
-func getAllOwnershipHistory(stub shim.ChaincodeStubInterface, id string) ([]byte, error){
-
-	var empty []byte
-	var ownershipHistory = OwnershipHistory{}
-
-	resultsIterator, err := stub.GetHistoryForKey(id)
-	if err != nil {
-		err = errors.New("Unable to get history for key: " + id + " | "+ err.Error())
-		return empty, err
-	}
-
-	defer resultsIterator.Close()
-
-	for resultsIterator.HasNext() {
-
-		response, err := resultsIterator.Next()
-		if err != nil {
-			return empty, err
-		}
-
-		ownershipAttribute := OwnershipAttribute{}
-		ownershipAttribute.TxId = response.TxId
-
-
-		err = json.Unmarshal(response.Value, &ownershipAttribute.Ownership)
-		if err != nil {
-			return empty, err
-		}
-
-		ownershipHistory.History = append(ownershipHistory.History, ownershipAttribute)
-
-	}
-
-	jsonOwnershipTransaction, err := json.Marshal(ownershipHistory)
-	if err != nil {
-		return empty, err
-	}
-
-	return jsonOwnershipTransaction, err
 
 }
 
