@@ -37,6 +37,7 @@ const getProperty = "getProperty"
 const ownership_1 = "ownership_1"
 const ownership_3 = "ownership_3"
 const property_1 = "property_1"
+const txId = `"b4fa043e2f2d0db269c37cf415635a529dc4f2fb7f0baf64d59e23536c60cda4"`
 const dateString = `"2017-06-28T21:57:16"`
 const emptyOwnershipPropertyJson = `{"properties":[]}`
 const emptyPropertyJson = `{"saleDate":"","salePrice":0,"owners":[]}`
@@ -83,7 +84,7 @@ func TestOwnershipUpdatedDuringPropertyTransaction(t *testing.T){
 
 	var property = TestAttribute{}
 
-	property = getTestProperty(property_1, dateString, 1000, getValidOwners())
+	property = getTestProperty(txId, property_1, dateString, 1000, getValidOwners())
 	checkPropertyTransaction(t,stub, property)
 
 	initialOwnership := TestAttribute{ownership_3, `{"properties":[{"id":"property_1","percentage":0.45}]}`}
@@ -93,7 +94,7 @@ func TestOwnershipUpdatedDuringPropertyTransaction(t *testing.T){
 	owner2 := `"id":"ownership_2","percentage":0.55`
 	owners := []string{owner3, owner2}
 
-	property = getTestProperty("property_2", dateString, 1000, owners)
+	property = getTestProperty(txId, "property_2", dateString, 1000, owners)
 	checkPropertyTransaction(t,stub, property)
 
 	updatedOwnership := TestAttribute{ownership_3, `{"properties":[{"id":"property_1","percentage":0.45},{"id":"property_2","percentage":0.45}]}`}
@@ -110,7 +111,7 @@ func TestOwnershipCreatedDuringPropertyTransaction(t *testing.T){
 	message := " | " + getOwnership + " with args: {" + string(ownershipArgs[1]) + "}, did not fail. "
 	handleExpectedFailures(t, stub, getOwnership, message, getOwnershipNilError, ownershipArgs, emptyOwnershipPropertyJson)
 
-	property := getTestProperty(property_1, dateString, 1000, getValidOwners())
+	property := getTestProperty(txId, property_1, dateString, 1000, getValidOwners())
 	checkPropertyTransaction(t,stub, property)
 
 	validOwnership := TestAttribute{ownership_3, `{"properties":[{"id":"property_1","percentage":0.45}]}`}
@@ -123,7 +124,7 @@ func TestPropertyTransaction(t *testing.T){
 
 	stub := getStub()
 
-	property := getTestProperty(property_1, dateString, 1000, getValidOwners())
+	property := getTestProperty(txId, property_1, dateString, 1000, getValidOwners())
 
 	checkPropertyTransaction(t,stub, property)
 	checkPropertyState(t, stub, property)
@@ -229,7 +230,7 @@ func TestGetProperty(t *testing.T){
 
 	stub := getStub()
 
-	property := getTestProperty(property_1, dateString, 1000, getValidOwners())
+	property := getTestProperty(txId, property_1, dateString, 1000, getValidOwners())
 
 	checkPropertyTransaction(t, stub, property)
 	checkGetProperty(t, stub, property)
@@ -240,7 +241,7 @@ func TestGetPropertyExtraArgs(t *testing.T){
 
 	stub := getStub()
 
-	property := getTestProperty(property_1, dateString, 1000, getValidOwners())
+	property := getTestProperty(txId, property_1, dateString, 1000, getValidOwners())
 
 	checkPropertyTransaction(t, stub, property)
 
@@ -312,11 +313,54 @@ func checkGetProperty(t *testing.T, stub *shim.MockStub, property TestAttribute)
 
 }
 
-func getTestProperty(propertyId string, saleDate string, salePrice float64, owners []string) (TestAttribute) {
+//func getTestProperty(propertyId string, saleDate string, salePrice float64, owners []string) (TestAttribute) {
+//
+//	var buffer bytes.Buffer
+//
+//	buffer.WriteString("{")
+//
+//	saleDateKey := `"saleDate":`
+//	buffer.WriteString(saleDateKey)
+//	buffer.WriteString(saleDate)
+//	buffer.WriteString(",")
+//
+//	salePriceKey := `"salePrice":`
+//	buffer.WriteString(salePriceKey)
+//	jsonSalePrice := strconv.FormatFloat(salePrice, 'f', -1, 64)
+//	buffer.WriteString(jsonSalePrice)
+//	buffer.WriteString(",")
+//
+//	ownersKey := `"owners":`
+//	buffer.WriteString(ownersKey)
+//	ownersAttribute := getTestOwners(propertyId, owners)
+//	buffer.WriteString(ownersAttribute.Value)
+//
+//	buffer.WriteString("}")
+//
+//	jsonProperty := TestAttribute{propertyId, buffer.String()}
+//
+//	return jsonProperty
+//
+//}
+
+
+//{"txid":"358b5b558c6f1e3fcb09af9510570f748e8e5a0bb16934471f98b0fe0a1514a9","id":"property_1","saleDate":"2017-06-28T21:57:16","salePrice":1000,"owners":[{"id":"ownership_3","percentage":0.45},{"id":"ownership_2","percentage":0.55}]}
+func getTestProperty(txid string, propertyId string, saleDate string, salePrice float64, owners []string) (TestAttribute) {
 
 	var buffer bytes.Buffer
 
 	buffer.WriteString("{")
+
+	txIdKey := `"txid":`
+	buffer.WriteString(txIdKey)
+	buffer.WriteString(txid)
+	buffer.WriteString(",")
+
+	propertyIdKey := `"id":`
+	buffer.WriteString(propertyIdKey)
+	buffer.WriteString("\"")
+	buffer.WriteString(propertyId)
+	buffer.WriteString("\",")
 
 	saleDateKey := `"saleDate":`
 	buffer.WriteString(saleDateKey)
@@ -337,6 +381,8 @@ func getTestProperty(propertyId string, saleDate string, salePrice float64, owne
 	buffer.WriteString("}")
 
 	jsonProperty := TestAttribute{propertyId, buffer.String()}
+
+	fmt.Println(jsonProperty)
 
 	return jsonProperty
 
