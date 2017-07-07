@@ -24,6 +24,7 @@ import (
 	"encoding/json"
 	"github.com/hyperledger/fabric/core/chaincode/shim"
 	pb "github.com/hyperledger/fabric/protos/peer"
+	"strconv"
 )
 
 type Chaincode struct {}
@@ -92,16 +93,73 @@ func (t *Chaincode) getOwnership(stub shim.ChaincodeStubInterface, args []string
 
 func (t *Chaincode) getOwnershipHistory(stub shim.ChaincodeStubInterface, args []string) pb.Response {
 
-	if len(args) != 1 {
-		return shim.Error("Incorrect number of arguments. Expecting 1")
-	}
-
-	buffer, err := getHistory(stub, args[0], "ownership")
+	id := args[0]
+	resultsIterator, err := stub.GetHistoryForKey(id)
 	if err != nil {
+		err = errors.New("Unable to get history for key: " + id + " | "+ err.Error())
 		return shim.Error(err.Error())
 	}
 
-	return shim.Success(buffer)
+	defer resultsIterator.Close()
+
+	var buffer bytes.Buffer
+	buffer.WriteString("[")
+	bArrayMemberAlreadyWritten := false
+
+	for resultsIterator.HasNext() {
+
+		response, err := resultsIterator.Next()
+		if err != nil {
+			return shim.Error(err.Error())
+		}
+
+		// Add a comma before array members, suppress it for the first array member
+		if bArrayMemberAlreadyWritten == true {
+			buffer.WriteString(",")
+		}
+		buffer.WriteString("{\"TxId\":")
+		buffer.WriteString("\"")
+		buffer.WriteString(response.TxId)
+		buffer.WriteString("\",")
+
+		// if it was a delete operation on given key, then we need to set the
+		//corresponding value null. Else, we will write the response.Value
+		//as-is (as the Value itself a JSON property)
+		if response.IsDelete {
+			buffer.WriteString("null")
+		} else {
+			ownership := Ownership{}
+
+			err := json.Unmarshal(response.Value, &ownership)
+			if err != nil {
+				return shim.Error(err.Error())
+			}
+
+			buffer.WriteString("\"properties\":[")
+			for i := 0; i < len(ownership.Properties); i++ {
+				buffer.WriteString("{")
+				buffer.WriteString("\"id\":\"")
+				buffer.WriteString(ownership.Properties[i].Id)
+				buffer.WriteString("\",\"percentage\":")
+				percentage := strconv.FormatFloat(ownership.Properties[i].Percentage, 'f', 2, 64)
+				buffer.WriteString(percentage)
+				buffer.WriteString("}")
+
+				if i != len(ownership.Properties) - 1{
+					buffer.WriteString(",")
+				}
+			}
+			buffer.WriteString("]")
+		}
+
+		buffer.WriteString("}")
+		bArrayMemberAlreadyWritten = true
+
+	}
+
+	buffer.WriteString("]")
+
+	return shim.Success(buffer.Bytes())
 
 }
 
@@ -358,6 +416,7 @@ func getHistory(stub shim.ChaincodeStubInterface, id string, historyType string)
 		}
 
 		buffer.WriteString("}")
+
 		bArrayMemberAlreadyWritten = true
 	}
 
