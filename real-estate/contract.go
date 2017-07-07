@@ -62,7 +62,7 @@ type Ownership struct {
 
 type OwnershipAttribute struct {
 	TxId			string			`json:"txid"`
-	Properties		[]Attribute		`json:"ownership"`
+	Properties		[]Attribute		`json:"properties"`
 }
 
 type Attribute struct {
@@ -207,7 +207,7 @@ func (t *Chaincode) getOwnershipHistory(stub shim.ChaincodeStubInterface, args [
 	if err != nil {
 		return shim.Error(err.Error())
 	}
-	
+
 	return shim.Success(jsonOwnershipTransaction)
 
 }
