@@ -55,6 +55,7 @@ type User struct{
 type Poll struct{
 	Options 		[]Option 		`json:"options"`
 	Status 			int 			`json:"status"`
+    Owner           string          `json:"owner"`
 }
 
 func (t *SimpleChaincode) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
@@ -179,7 +180,7 @@ func (t *SimpleChaincode) newQuery(stub shim.ChaincodeStubInterface, args []stri
                 pollAsStringIfStatusOne = pollAsStringIfStatusOne + ",{\"name\":\"" +poll.Options[i].Name+"\",\"count\":0}"
             }
         }
-        pollAsStringIfStatusOne = pollAsStringIfStatusOne + "],\"status\":1}"
+        pollAsStringIfStatusOne = pollAsStringIfStatusOne + "],\"status\":1,\"owner\":\""+poll.Owner+"\"}"
         pollAsByteIfStatusOne = []byte(pollAsStringIfStatusOne)
         fmt.Printf("Query Response:%s\n", pollAsStringIfStatusOne)
         return shim.Success(pollAsByteIfStatusOne)
@@ -422,24 +423,34 @@ func (t *SimpleChaincode) activeToInactivePoll(stub shim.ChaincodeStubInterface,
 	return shim.Success(nil)
 }
 
-//peer chaincode invoke -o orderer.example.com:7050 -C mychannel -n mycc -c '{"Args":["addNewPoll","my_poll0","{\"Options\":[{\"Name\":\"opt1\",\"Count\":0},{\"Name\":\"opt2\",\"Count\":0}],\"status\":1}"]}'
+//peer chaincode invoke -o orderer.example.com:7050 -C mychannel -n mycc -c '{"Args":["addNewPoll","my_poll0","{\"Options\":[{\"Name\":\"opt1\",\"Count\":0},{\"Name\":\"opt2\",\"Count\":0}],\"status\":1,\"Owner\":\"c\"}","c"]}'
 func (t *SimpleChaincode) addNewPoll(stub shim.ChaincodeStubInterface, args []string) pb.Response {
 	var poll Poll
 	var pollAsJsonByteArray []byte
     var pollAsJsonString string
-	var pollExists bool
+	var ownerExists, pollExists bool
 	var err error
+    var owner string
 
-	if len(args) < 2 {
-		return shim.Error("put operation must include one arguments, a key")
+	if len(args) < 3 {
+		return shim.Error("put operation must include 3 arguments")
 	}
 
 	key := args[0]
 	s := args[1]
+    owner = args[2]
+
+    ownerExists, err = isExistingUser(stub, owner)
+    if err != nil {
+        return shim.Error(err.Error())
+    }
+    if ownerExists==false {
+        return shim.Error("No user with id:" + key)
+    }
 
 	poll, err = createNewPoll(s)
 	if err != nil {
-		return shim.Error("Expecting integer value for user holding")
+		return shim.Error("error during the createNewPoll function")
 	}
 
 	pollAsJsonByteArray, err = getPollAsJsonByteArray(poll)
@@ -571,14 +582,22 @@ func (t *SimpleChaincode) changeStatusToZero(stub shim.ChaincodeStubInterface, a
 	var pollKey, pollAsJsonString string
 	var pollAsBytes []byte
 	var poll Poll
-	var statusOne bool
+	var statusOne, ownerAllowed bool
 	var err error
+    var currentUser string
 
-	if len(args) != 1 {
+	if len(args) != 2 {
 		return shim.Error("put operation must include three arguments, a userKey, a pollKey and an option ")
 	}
 	
 	pollKey = args[0]
+    currentUser = args[1]
+
+    ownerAllowed, err = isOwnerAllowed(stub,pollKey,currentUser)
+    if ownerAllowed == false {
+        return shim.Error("the user: "+ currentUser + " is not the owner of the poll")
+    }
+
 	pollAsBytes, err = stub.GetState(pollKey)
     poll, err = getPollFromJsonByteArray(pollAsBytes)
 
@@ -775,6 +794,17 @@ func isStatusOne(stub shim.ChaincodeStubInterface, poll Poll) (bool,error){
     }
 
     return result, err
+}
+
+func isOwnerAllowed(stub shim.ChaincodeStubInterface, pollKey string, currentUser string) (bool,error){
+    var err error
+    result := false
+    pollAsBytes, err := stub.GetState(pollKey)
+    poll, err := getPollFromJsonByteArray(pollAsBytes)
+    if poll.Owner ==currentUser{
+        result = true
+    }
+    return result,err
 }
 
 func getUserAsJsonByteArray(user User) ([]byte, error){

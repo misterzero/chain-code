@@ -266,25 +266,27 @@ func TestExample02_AddNewPoll(t *testing.T) {
 	scc := new(SimpleChaincode)
 	stub := shim.NewMockStub("ex02", scc)
 
-	checkAddNewPoll(t, stub, [][]byte{[]byte("addNewPoll"), []byte("mypoll"), []byte("{\"Options\":[{\"Name\":\"opt1\",\"Count\":0},{\"Name\":\"opt2\",\"Count\":0}],\"status\":1}")})
-	checkNewQuery(t, stub, "mypoll", "{\"options\":[{\"name\":\"opt1\",\"count\":0},{\"name\":\"opt2\",\"count\":0}],\"status\":1}")
+	checkAddUser(t, stub, [][]byte{[]byte("addUser"), []byte("c")})
+	checkAddNewPoll(t, stub, [][]byte{[]byte("addNewPoll"), []byte("mypoll"), []byte("{\"Options\":[{\"Name\":\"opt1\",\"Count\":0},{\"Name\":\"opt2\",\"Count\":0}],\"status\":1,\"owner\":\"c\"}"), []byte("c")})
+	checkNewQuery(t, stub, "mypoll", "{\"options\":[{\"name\":\"opt1\",\"count\":0},{\"name\":\"opt2\",\"count\":0}],\"status\":1,\"owner\":\"c\"}")
 }
 
 func TestExample02_AddNewPoll_Exists(t *testing.T) {
 	scc := new(SimpleChaincode)
 	stub := shim.NewMockStub("ex02", scc)
 
-	checkAddNewPoll(t, stub, [][]byte{[]byte("addNewPoll"), []byte("mypoll"), []byte("{\"Options\":[{\"Name\":\"opt1\",\"Count\":0},{\"Name\":\"opt2\",\"Count\":0}],\"status\":1}")})
-	checkAddNewPoll_Exists(t, stub, [][]byte{[]byte("addNewPoll"), []byte("mypoll"), []byte("{\"Options\":[{\"Name\":\"opt3\",\"Count\":0},{\"Name\":\"opt4\",\"Count\":0}],\"status\":1}")})
-	checkNewQuery(t, stub, "mypoll", "{\"options\":[{\"name\":\"opt1\",\"count\":0},{\"name\":\"opt2\",\"count\":0}],\"status\":1}")
+	checkAddUser(t, stub, [][]byte{[]byte("addUser"), []byte("c")})
+	checkAddNewPoll(t, stub, [][]byte{[]byte("addNewPoll"), []byte("mypoll"), []byte("{\"Options\":[{\"Name\":\"opt1\",\"Count\":0},{\"Name\":\"opt2\",\"Count\":0}],\"status\":1,\"owner\":\"c\"}"), []byte("c")})
+	checkAddNewPoll_Exists(t, stub, [][]byte{[]byte("addNewPoll"), []byte("mypoll"), []byte("{\"Options\":[{\"Name\":\"opt3\",\"Count\":0},{\"Name\":\"opt4\",\"Count\":0}],\"status\":1,\"owner\":\"c\"}"), []byte("c")})
+	checkNewQuery(t, stub, "mypoll", "{\"options\":[{\"name\":\"opt1\",\"count\":0},{\"name\":\"opt2\",\"count\":0}],\"status\":1,\"owner\":\"c\"}")
 }
 
 func TestExample02_AddNewActivePollToUser(t *testing.T) {
 	scc := new(SimpleChaincode)
 	stub := shim.NewMockStub("ex02", scc)
 
-	checkAddNewPoll(t, stub, [][]byte{[]byte("addNewPoll"), []byte("mypoll"), []byte("{\"Options\":[{\"Name\":\"opt1\",\"Count\":0},{\"Name\":\"opt2\",\"Count\":0}],\"status\":1}")})
 	checkAddUser(t, stub, [][]byte{[]byte("addUser"), []byte("c")})
+	checkAddNewPoll(t, stub, [][]byte{[]byte("addNewPoll"), []byte("mypoll"), []byte("{\"Options\":[{\"Name\":\"opt1\",\"Count\":0},{\"Name\":\"opt2\",\"Count\":0}],\"status\":1,\"owner\":\"c\"}"), []byte("c")})
 	checkAddNewActivePollToUser(t, stub, [][]byte{[]byte("addNewActivePollToUser"),[]byte("c"), []byte("mypoll")})
 	checkNewQuery(t, stub, "c", "{\"active\":[{\"name\":\"mypoll\",\"token\":1}],\"inactive\":[]}")
 }
@@ -293,8 +295,8 @@ func TestExample02_AddNewActivePollToManyUsers(t *testing.T) {
 	scc := new(SimpleChaincode)
 	stub := shim.NewMockStub("ex02", scc)
 
-	checkAddNewPoll(t, stub, [][]byte{[]byte("addNewPoll"), []byte("mypoll"), []byte("{\"Options\":[{\"Name\":\"opt1\",\"Count\":0},{\"Name\":\"opt2\",\"Count\":0}],\"status\":1}")})
 	checkAddUser(t, stub, [][]byte{[]byte("addUser"), []byte("c")})
+	checkAddNewPoll(t, stub, [][]byte{[]byte("addNewPoll"), []byte("mypoll"), []byte("{\"Options\":[{\"Name\":\"opt1\",\"Count\":0},{\"Name\":\"opt2\",\"Count\":0}],\"status\":1,\"owner\":\"c\"}"), []byte("c")})
 	checkAddUser(t, stub, [][]byte{[]byte("addUser"), []byte("d")})
 	checkAddNewActivePollToManyUsers(t, stub, [][]byte{[]byte("addNewActivePollToManyUsers"),[]byte("c,d"), []byte("mypoll")})
 	checkNewQuery(t, stub, "c", "{\"active\":[{\"name\":\"mypoll\",\"token\":1}],\"inactive\":[]}")
@@ -305,8 +307,8 @@ func TestExample02_AddNewActivePollToManyUsers_OneUserDoesNotExist(t *testing.T)
 	scc := new(SimpleChaincode)
 	stub := shim.NewMockStub("ex02", scc)
 
-	checkAddNewPoll(t, stub, [][]byte{[]byte("addNewPoll"), []byte("mypoll"), []byte("{\"Options\":[{\"Name\":\"opt1\",\"Count\":0},{\"Name\":\"opt2\",\"Count\":0}],\"status\":1}")})
 	checkAddUser(t, stub, [][]byte{[]byte("addUser"), []byte("c")})
+	checkAddNewPoll(t, stub, [][]byte{[]byte("addNewPoll"), []byte("mypoll"), []byte("{\"Options\":[{\"Name\":\"opt1\",\"Count\":0},{\"Name\":\"opt2\",\"Count\":0}],\"status\":1,\"owner\":\"c\"}"), []byte("c")})
 	checkAddUser(t, stub, [][]byte{[]byte("addUser"), []byte("d")})
 	checkAddNewActivePollToManyUsers_OneUserDoesNotExist(t, stub, [][]byte{[]byte("addNewActivePollToManyUsers"),[]byte("c,e,d"), []byte("mypoll")})
 	checkNewQuery(t, stub, "c", "{\"active\":[],\"inactive\":[]}")
@@ -326,16 +328,17 @@ func TestExample02_AddNewActivePollToUser_NoUser(t *testing.T) {
 	scc := new(SimpleChaincode)
 	stub := shim.NewMockStub("ex02", scc)
 
-	checkAddNewPoll(t, stub, [][]byte{[]byte("addNewPoll"), []byte("mypoll"), []byte("{\"Options\":[{\"Name\":\"opt1\",\"Count\":0},{\"Name\":\"opt2\",\"Count\":0}],\"status\":1}")})
-	checkAddNewActivePollToUser_NoUser(t, stub, [][]byte{[]byte("addNewActivePollToUser"),[]byte("c"), []byte("mypoll0")})
+	checkAddUser(t, stub, [][]byte{[]byte("addUser"), []byte("c")})
+	checkAddNewPoll(t, stub, [][]byte{[]byte("addNewPoll"), []byte("mypoll"), []byte("{\"Options\":[{\"Name\":\"opt1\",\"Count\":0},{\"Name\":\"opt2\",\"Count\":0}],\"status\":1,\"owner\":\"c\"}"), []byte("c")})
+	checkAddNewActivePollToUser_NoUser(t, stub, [][]byte{[]byte("addNewActivePollToUser"),[]byte("d"), []byte("mypoll")})
 }
 
 func TestExample02_AddNewActivePollToUser_AlreadyAdded(t *testing.T) {
 	scc := new(SimpleChaincode)
 	stub := shim.NewMockStub("ex02", scc)
 
-	checkAddNewPoll(t, stub, [][]byte{[]byte("addNewPoll"), []byte("mypoll"), []byte("{\"Options\":[{\"Name\":\"opt1\",\"Count\":0},{\"Name\":\"opt2\",\"Count\":0}],\"status\":1}")})
 	checkAddUser(t, stub, [][]byte{[]byte("addUser"), []byte("c")})
+	checkAddNewPoll(t, stub, [][]byte{[]byte("addNewPoll"), []byte("mypoll"), []byte("{\"Options\":[{\"Name\":\"opt1\",\"Count\":0},{\"Name\":\"opt2\",\"Count\":0}],\"status\":1,\"owner\":\"c\"}"), []byte("c")})
 	checkAddNewActivePollToUser(t, stub, [][]byte{[]byte("addNewActivePollToUser"),[]byte("c"), []byte("mypoll")})
 	checkAddNewActivePollToUser_AlreadyAdded(t, stub, [][]byte{[]byte("addNewActivePollToUser"),[]byte("c"), []byte("mypoll")})
 }
@@ -344,8 +347,8 @@ func TestExample02_ActiveToInactivePoll(t *testing.T) {
 	scc := new(SimpleChaincode)
 	stub := shim.NewMockStub("ex02", scc)
 
-	checkAddNewPoll(t, stub, [][]byte{[]byte("addNewPoll"), []byte("mypoll"), []byte("{\"Options\":[{\"Name\":\"opt1\",\"Count\":0},{\"Name\":\"opt2\",\"Count\":0}],\"status\":1}")})
 	checkAddUser(t, stub, [][]byte{[]byte("addUser"), []byte("c")})
+	checkAddNewPoll(t, stub, [][]byte{[]byte("addNewPoll"), []byte("mypoll"), []byte("{\"Options\":[{\"Name\":\"opt1\",\"Count\":0},{\"Name\":\"opt2\",\"Count\":0}],\"status\":1}"), []byte("c")})
 	checkAddNewActivePollToUser(t, stub, [][]byte{[]byte("addNewActivePollToUser"),[]byte("c"), []byte("mypoll")})
 	checkActiveToInactivePoll(t, stub, [][]byte{[]byte("activeToInactivePoll"),[]byte("c"), []byte("mypoll")})
 	checkNewQuery(t, stub, "c", "{\"active\":[],\"inactive\":[\"mypoll\"]}")
@@ -355,8 +358,8 @@ func TestExample02_ActiveToInactivePoll_NoUser(t *testing.T) {
 	scc := new(SimpleChaincode)
 	stub := shim.NewMockStub("ex02", scc)
 
-	checkAddNewPoll(t, stub, [][]byte{[]byte("addNewPoll"), []byte("mypoll"), []byte("{\"Options\":[{\"Name\":\"opt1\",\"Count\":0},{\"Name\":\"opt2\",\"Count\":0}],\"status\":1}")})
 	checkAddUser(t, stub, [][]byte{[]byte("addUser"), []byte("c")})
+	checkAddNewPoll(t, stub, [][]byte{[]byte("addNewPoll"), []byte("mypoll"), []byte("{\"Options\":[{\"Name\":\"opt1\",\"Count\":0},{\"Name\":\"opt2\",\"Count\":0}],\"status\":1,\"owner\":\"c\"}"), []byte("c")})
 	checkAddNewActivePollToUser(t, stub, [][]byte{[]byte("addNewActivePollToUser"),[]byte("c"), []byte("mypoll")})
 	checkActiveToInactivePoll_NoUser(t, stub, [][]byte{[]byte("activeToInactivePoll"),[]byte("d"), []byte("mypoll")})
 }
@@ -365,8 +368,8 @@ func TestExample02_ActiveToInactivePoll_NoPollForUser(t *testing.T) {
 	scc := new(SimpleChaincode)
 	stub := shim.NewMockStub("ex02", scc)
 
-	checkAddNewPoll(t, stub, [][]byte{[]byte("addNewPoll"), []byte("mypoll"), []byte("{\"Options\":[{\"Name\":\"opt1\",\"Count\":0},{\"Name\":\"opt2\",\"Count\":0}],\"status\":1}")})
 	checkAddUser(t, stub, [][]byte{[]byte("addUser"), []byte("c")})
+	checkAddNewPoll(t, stub, [][]byte{[]byte("addNewPoll"), []byte("mypoll"), []byte("{\"Options\":[{\"Name\":\"opt1\",\"Count\":0},{\"Name\":\"opt2\",\"Count\":0}],\"status\":1,\"owner\":\"c\"}"), []byte("c")})
 	checkAddNewActivePollToUser(t, stub, [][]byte{[]byte("addNewActivePollToUser"),[]byte("c"), []byte("mypoll")})
 	checkActiveToInactivePoll_NoPollForUser(t, stub, [][]byte{[]byte("activeToInactivePoll"),[]byte("c"), []byte("mypoll0")})
 	checkNewQuery(t, stub, "c", "{\"active\":[{\"name\":\"mypoll\",\"token\":1}],\"inactive\":[]}")
@@ -376,122 +379,122 @@ func TestExample02_Vote(t *testing.T) {
 	scc := new(SimpleChaincode)
 	stub := shim.NewMockStub("ex02", scc)
 
-	checkAddNewPoll(t, stub, [][]byte{[]byte("addNewPoll"), []byte("mypoll"), []byte("{\"Options\":[{\"Name\":\"opt1\",\"Count\":0},{\"Name\":\"opt2\",\"Count\":0}],\"status\":1}")})
 	checkAddUser(t, stub, [][]byte{[]byte("addUser"), []byte("c")})
+	checkAddNewPoll(t, stub, [][]byte{[]byte("addNewPoll"), []byte("mypoll"), []byte("{\"Options\":[{\"Name\":\"opt1\",\"Count\":0},{\"Name\":\"opt2\",\"Count\":0}],\"status\":1,\"owner\":\"c\"}"), []byte("c")})
 	checkAddNewActivePollToUser(t, stub, [][]byte{[]byte("addNewActivePollToUser"),[]byte("c"), []byte("mypoll")})
 	checkVote(t, stub, [][]byte{[]byte("vote"),[]byte("c"), []byte("mypoll"), []byte("opt1")})
-	checkChangeStatusToZero(t, stub, [][]byte{[]byte("changeStatusToZero"), []byte("mypoll")})
+	checkChangeStatusToZero(t, stub, [][]byte{[]byte("changeStatusToZero"), []byte("mypoll"), []byte("c")})
 	checkNewQuery(t, stub, "c", "{\"active\":[{\"name\":\"mypoll\",\"token\":0}],\"inactive\":[]}")
-	checkNewQuery(t, stub, "mypoll", "{\"options\":[{\"name\":\"opt1\",\"count\":1},{\"name\":\"opt2\",\"count\":0}],\"status\":0}")
+	checkNewQuery(t, stub, "mypoll", "{\"options\":[{\"name\":\"opt1\",\"count\":1},{\"name\":\"opt2\",\"count\":0}],\"status\":0,\"owner\":\"c\"}")
 }
 
 func TestExample02_Vote_NoUser(t *testing.T) {
 	scc := new(SimpleChaincode)
 	stub := shim.NewMockStub("ex02", scc)
 
-	checkAddNewPoll(t, stub, [][]byte{[]byte("addNewPoll"), []byte("mypoll"), []byte("{\"Options\":[{\"Name\":\"opt1\",\"Count\":0},{\"Name\":\"opt2\",\"Count\":0}],\"status\":1}")})
 	checkAddUser(t, stub, [][]byte{[]byte("addUser"), []byte("c")})
+	checkAddNewPoll(t, stub, [][]byte{[]byte("addNewPoll"), []byte("mypoll"), []byte("{\"Options\":[{\"Name\":\"opt1\",\"Count\":0},{\"Name\":\"opt2\",\"Count\":0}],\"status\":1,\"owner\":\"c\"}"), []byte("c")})
 	checkAddNewActivePollToUser(t, stub, [][]byte{[]byte("addNewActivePollToUser"),[]byte("c"), []byte("mypoll")})
 	checkVote_NoUser(t, stub, [][]byte{[]byte("vote"),[]byte("d"), []byte("mypoll"), []byte("opt1")})
 
 	checkNewQuery(t, stub, "c", "{\"active\":[{\"name\":\"mypoll\",\"token\":1}],\"inactive\":[]}")
-	checkNewQuery(t, stub, "mypoll", "{\"options\":[{\"name\":\"opt1\",\"count\":0},{\"name\":\"opt2\",\"count\":0}],\"status\":1}")
+	checkNewQuery(t, stub, "mypoll", "{\"options\":[{\"name\":\"opt1\",\"count\":0},{\"name\":\"opt2\",\"count\":0}],\"status\":1,\"owner\":\"c\"}")
 }
 
 func TestExample02_Vote_NoPoll(t *testing.T) {
 	scc := new(SimpleChaincode)
 	stub := shim.NewMockStub("ex02", scc)
-
-	checkAddNewPoll(t, stub, [][]byte{[]byte("addNewPoll"), []byte("mypoll"), []byte("{\"Options\":[{\"Name\":\"opt1\",\"Count\":0},{\"Name\":\"opt2\",\"Count\":0}],\"status\":1}")})
+	
 	checkAddUser(t, stub, [][]byte{[]byte("addUser"), []byte("c")})
+	checkAddNewPoll(t, stub, [][]byte{[]byte("addNewPoll"), []byte("mypoll"), []byte("{\"Options\":[{\"Name\":\"opt1\",\"Count\":0},{\"Name\":\"opt2\",\"Count\":0}],\"status\":1,\"owner\":\"c\"}"), []byte("c")})
 	checkAddNewActivePollToUser(t, stub, [][]byte{[]byte("addNewActivePollToUser"),[]byte("c"), []byte("mypoll")})
 	checkVote_NoPoll(t, stub, [][]byte{[]byte("vote"),[]byte("c"), []byte("mypoll0"), []byte("opt1")})
 
 	checkNewQuery(t, stub, "c", "{\"active\":[{\"name\":\"mypoll\",\"token\":1}],\"inactive\":[]}")
-	checkNewQuery(t, stub, "mypoll", "{\"options\":[{\"name\":\"opt1\",\"count\":0},{\"name\":\"opt2\",\"count\":0}],\"status\":1}")
+	checkNewQuery(t, stub, "mypoll", "{\"options\":[{\"name\":\"opt1\",\"count\":0},{\"name\":\"opt2\",\"count\":0}],\"status\":1,\"owner\":\"c\"}")
 }
 
 func TestExample02_Vote_NotAllowed(t *testing.T) {
 	scc := new(SimpleChaincode)
 	stub := shim.NewMockStub("ex02", scc)
 
-	checkAddNewPoll(t, stub, [][]byte{[]byte("addNewPoll"), []byte("mypoll"), []byte("{\"Options\":[{\"Name\":\"opt1\",\"Count\":0},{\"Name\":\"opt2\",\"Count\":0}],\"status\":1}")})
 	checkAddUser(t, stub, [][]byte{[]byte("addUser"), []byte("c")})
+	checkAddNewPoll(t, stub, [][]byte{[]byte("addNewPoll"), []byte("mypoll"), []byte("{\"Options\":[{\"Name\":\"opt1\",\"Count\":0},{\"Name\":\"opt2\",\"Count\":0}],\"status\":1,\"owner\":\"c\"}"), []byte("c")})
 	checkAddNewActivePollToUser(t, stub, [][]byte{[]byte("addNewActivePollToUser"),[]byte("c"), []byte("mypoll")})
 
 	checkVote_NotAllowed(t, stub, [][]byte{[]byte("vote"),[]byte("c"), []byte("mypoll0"), []byte("opt1")})
-	checkNewQuery(t, stub, "mypoll", "{\"options\":[{\"name\":\"opt1\",\"count\":0},{\"name\":\"opt2\",\"count\":0}],\"status\":1}")
+	checkNewQuery(t, stub, "mypoll", "{\"options\":[{\"name\":\"opt1\",\"count\":0},{\"name\":\"opt2\",\"count\":0}],\"status\":1,\"owner\":\"c\"}")
 }
 
 func TestExample02_Vote_VoteClosed(t *testing.T) {
 	scc := new(SimpleChaincode)
 	stub := shim.NewMockStub("ex02", scc)
 
-	checkAddNewPoll(t, stub, [][]byte{[]byte("addNewPoll"), []byte("mypoll"), []byte("{\"Options\":[{\"Name\":\"opt1\",\"Count\":0},{\"Name\":\"opt2\",\"Count\":0}],\"status\":1}")})
 	checkAddUser(t, stub, [][]byte{[]byte("addUser"), []byte("c")})
+	checkAddNewPoll(t, stub, [][]byte{[]byte("addNewPoll"), []byte("mypoll"), []byte("{\"Options\":[{\"Name\":\"opt1\",\"Count\":0},{\"Name\":\"opt2\",\"Count\":0}],\"status\":1,\"owner\":\"c\"}"), []byte("c")})
 	checkAddNewActivePollToUser(t, stub, [][]byte{[]byte("addNewActivePollToUser"),[]byte("c"), []byte("mypoll")})
-	checkChangeStatusToZero(t, stub, [][]byte{[]byte("changeStatusToZero"), []byte("mypoll")})
+	checkChangeStatusToZero(t, stub, [][]byte{[]byte("changeStatusToZero"), []byte("mypoll"), []byte("c")})
 	checkVote_VoteClosed(t, stub, [][]byte{[]byte("vote"),[]byte("c"), []byte("mypoll"), []byte("opt1")})
 	checkNewQuery(t, stub, "c", "{\"active\":[{\"name\":\"mypoll\",\"token\":1}],\"inactive\":[]}")
-	checkNewQuery(t, stub, "mypoll", "{\"options\":[{\"name\":\"opt1\",\"count\":0},{\"name\":\"opt2\",\"count\":0}],\"status\":0}")
+	checkNewQuery(t, stub, "mypoll", "{\"options\":[{\"name\":\"opt1\",\"count\":0},{\"name\":\"opt2\",\"count\":0}],\"status\":0,\"owner\":\"c\"}")
 }
 
 func TestExample02_Vote_HasAlreadyVoted(t *testing.T) {
 	scc := new(SimpleChaincode)
 	stub := shim.NewMockStub("ex02", scc)
 
-	checkAddNewPoll(t, stub, [][]byte{[]byte("addNewPoll"), []byte("mypoll"), []byte("{\"Options\":[{\"Name\":\"opt1\",\"Count\":0},{\"Name\":\"opt2\",\"Count\":0}],\"status\":1}")})
 	checkAddUser(t, stub, [][]byte{[]byte("addUser"), []byte("c")})
+	checkAddNewPoll(t, stub, [][]byte{[]byte("addNewPoll"), []byte("mypoll"), []byte("{\"Options\":[{\"Name\":\"opt1\",\"Count\":0},{\"Name\":\"opt2\",\"Count\":0}],\"status\":1,\"owner\":\"c\"}"), []byte("c")})
 	checkAddNewActivePollToUser(t, stub, [][]byte{[]byte("addNewActivePollToUser"),[]byte("c"), []byte("mypoll")})
 	checkVote(t, stub, [][]byte{[]byte("vote"),[]byte("c"), []byte("mypoll"), []byte("opt1")})
 	checkVote_HasAlreadyVoted(t, stub, [][]byte{[]byte("vote"),[]byte("c"), []byte("mypoll"), []byte("opt1")})
 	checkNewQuery(t, stub, "c", "{\"active\":[{\"name\":\"mypoll\",\"token\":0}],\"inactive\":[]}")
-	checkChangeStatusToZero(t, stub, [][]byte{[]byte("changeStatusToZero"), []byte("mypoll")})
-	checkNewQuery(t, stub, "mypoll", "{\"options\":[{\"name\":\"opt1\",\"count\":1},{\"name\":\"opt2\",\"count\":0}],\"status\":0}")
+	checkChangeStatusToZero(t, stub, [][]byte{[]byte("changeStatusToZero"), []byte("mypoll"), []byte("c")})
+	checkNewQuery(t, stub, "mypoll", "{\"options\":[{\"name\":\"opt1\",\"count\":1},{\"name\":\"opt2\",\"count\":0}],\"status\":0,\"owner\":\"c\"}")
 }
 
 func TestExample02_Vote_NoOption(t *testing.T) {
 	scc := new(SimpleChaincode)
 	stub := shim.NewMockStub("ex02", scc)
 
-	checkAddNewPoll(t, stub, [][]byte{[]byte("addNewPoll"), []byte("mypoll"), []byte("{\"Options\":[{\"Name\":\"opt1\",\"Count\":0},{\"Name\":\"opt2\",\"Count\":0}],\"status\":1}")})
-	checkAddUser(t, stub, [][]byte{[]byte("addUser"), []byte("c")})
+	checkAddUser(t, stub, [][]byte{[]byte("addUser"), []byte("c")})	
+	checkAddNewPoll(t, stub, [][]byte{[]byte("addNewPoll"), []byte("mypoll"), []byte("{\"Options\":[{\"Name\":\"opt1\",\"Count\":0},{\"Name\":\"opt2\",\"Count\":0}],\"status\":1,\"owner\":\"c\"}"), []byte("c")})
 	checkAddNewActivePollToUser(t, stub, [][]byte{[]byte("addNewActivePollToUser"),[]byte("c"), []byte("mypoll")})
 	checkVote_NoOption(t, stub, [][]byte{[]byte("vote"),[]byte("c"), []byte("mypoll"), []byte("opt3")})
 	checkNewQuery(t, stub, "c", "{\"active\":[{\"name\":\"mypoll\",\"token\":1}],\"inactive\":[]}")
-	checkNewQuery(t, stub, "mypoll", "{\"options\":[{\"name\":\"opt1\",\"count\":0},{\"name\":\"opt2\",\"count\":0}],\"status\":1}")
+	checkNewQuery(t, stub, "mypoll", "{\"options\":[{\"name\":\"opt1\",\"count\":0},{\"name\":\"opt2\",\"count\":0}],\"status\":1,\"owner\":\"c\"}")
 }
 
 func TestExample02_ChangeStatusToZero(t *testing.T) {
 	scc := new(SimpleChaincode)
 	stub := shim.NewMockStub("ex02", scc)
 
-	checkAddNewPoll(t, stub, [][]byte{[]byte("addNewPoll"), []byte("mypoll"), []byte("{\"Options\":[{\"Name\":\"opt1\",\"Count\":0},{\"Name\":\"opt2\",\"Count\":0}],\"status\":1}")})
 	checkAddUser(t, stub, [][]byte{[]byte("addUser"), []byte("c")})
+	checkAddNewPoll(t, stub, [][]byte{[]byte("addNewPoll"), []byte("mypoll"), []byte("{\"Options\":[{\"Name\":\"opt1\",\"Count\":0},{\"Name\":\"opt2\",\"Count\":0}],\"status\":1,\"owner\":\"c\"}"), []byte("c")})
 	checkAddNewActivePollToUser(t, stub, [][]byte{[]byte("addNewActivePollToUser"),[]byte("c"), []byte("mypoll")})
-	checkChangeStatusToZero(t, stub, [][]byte{[]byte("changeStatusToZero"), []byte("mypoll")})
-	checkNewQuery(t, stub, "mypoll", "{\"options\":[{\"name\":\"opt1\",\"count\":0},{\"name\":\"opt2\",\"count\":0}],\"status\":0}")
+	checkChangeStatusToZero(t, stub, [][]byte{[]byte("changeStatusToZero"), []byte("mypoll"), []byte("c")})
+	checkNewQuery(t, stub, "mypoll", "{\"options\":[{\"name\":\"opt1\",\"count\":0},{\"name\":\"opt2\",\"count\":0}],\"status\":0,\"owner\":\"c\"}")
 }
 
 func TestExample02_ChangeStatusToZero_NoPoll(t *testing.T) {
 	scc := new(SimpleChaincode)
 	stub := shim.NewMockStub("ex02", scc)
 
-	checkAddNewPoll(t, stub, [][]byte{[]byte("addNewPoll"), []byte("mypoll"), []byte("{\"Options\":[{\"Name\":\"opt1\",\"Count\":0},{\"Name\":\"opt2\",\"Count\":0}],\"status\":1}")})
 	checkAddUser(t, stub, [][]byte{[]byte("addUser"), []byte("c")})
+	checkAddNewPoll(t, stub, [][]byte{[]byte("addNewPoll"), []byte("mypoll"), []byte("{\"Options\":[{\"Name\":\"opt1\",\"Count\":0},{\"Name\":\"opt2\",\"Count\":0}],\"status\":1,\"owner\":\"c\"}"), []byte("c")})
 	checkAddNewActivePollToUser(t, stub, [][]byte{[]byte("addNewActivePollToUser"),[]byte("c"), []byte("mypoll")})
-	checkChangeStatusToZero_NoPoll(t, stub, [][]byte{[]byte("changeStatusToZero"), []byte("mypoll0")})
-	checkNewQuery(t, stub, "mypoll", "{\"options\":[{\"name\":\"opt1\",\"count\":0},{\"name\":\"opt2\",\"count\":0}],\"status\":1}")
+	checkChangeStatusToZero_NoPoll(t, stub, [][]byte{[]byte("changeStatusToZero"), []byte("mypoll0"), []byte("c")})
+	checkNewQuery(t, stub, "mypoll", "{\"options\":[{\"name\":\"opt1\",\"count\":0},{\"name\":\"opt2\",\"count\":0}],\"status\":1,\"owner\":\"c\"}")
 }
 
 func TestExample02_ChangeStatusToZero_StatusAlready0(t *testing.T) {
 	scc := new(SimpleChaincode)
 	stub := shim.NewMockStub("ex02", scc)
 
-	checkAddNewPoll(t, stub, [][]byte{[]byte("addNewPoll"), []byte("mypoll"), []byte("{\"Options\":[{\"Name\":\"opt1\",\"Count\":0},{\"Name\":\"opt2\",\"Count\":0}],\"status\":1}")})
 	checkAddUser(t, stub, [][]byte{[]byte("addUser"), []byte("c")})
+	checkAddNewPoll(t, stub, [][]byte{[]byte("addNewPoll"), []byte("mypoll"), []byte("{\"Options\":[{\"Name\":\"opt1\",\"Count\":0},{\"Name\":\"opt2\",\"Count\":0}],\"status\":1,\"owner\":\"c\"}"), []byte("c")})
 	checkAddNewActivePollToUser(t, stub, [][]byte{[]byte("addNewActivePollToUser"),[]byte("c"), []byte("mypoll")})
-	checkChangeStatusToZero(t, stub, [][]byte{[]byte("changeStatusToZero"), []byte("mypoll")})
-	checkChangeStatusToZero_StatusAlready0(t, stub, [][]byte{[]byte("changeStatusToZero"), []byte("mypoll")})
-	checkNewQuery(t, stub, "mypoll", "{\"options\":[{\"name\":\"opt1\",\"count\":0},{\"name\":\"opt2\",\"count\":0}],\"status\":0}")
+	checkChangeStatusToZero(t, stub, [][]byte{[]byte("changeStatusToZero"), []byte("mypoll"), []byte("c")})
+	checkChangeStatusToZero_StatusAlready0(t, stub, [][]byte{[]byte("changeStatusToZero"), []byte("mypoll"), []byte("c")})
+	checkNewQuery(t, stub, "mypoll", "{\"options\":[{\"name\":\"opt1\",\"count\":0},{\"name\":\"opt2\",\"count\":0}],\"status\":0,\"owner\":\"c\"}")
 }
