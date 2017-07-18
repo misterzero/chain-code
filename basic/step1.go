@@ -577,7 +577,7 @@ func (t *SimpleChaincode) vote(stub shim.ChaincodeStubInterface, args []string) 
 
 	return shim.Success(nil)
 }
-//peer chaincode invoke -o orderer.example.com:7050 -C mychannel -n mycc -c '{"Args":["changeStatusToZero","my_poll0"]}'
+//peer chaincode invoke -o orderer.example.com:7050 -C mychannel -n mycc -c '{"Args":["changeStatusToZero","my_poll0","c"]}'
 func (t *SimpleChaincode) changeStatusToZero(stub shim.ChaincodeStubInterface, args []string) pb.Response{
 	var pollKey, pollAsJsonString string
 	var pollAsBytes []byte
