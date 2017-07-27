@@ -45,9 +45,10 @@ contract Dividends  {
         return investorsList.push(investorAddress) -1;
     }
     
-    function updateInvestorTokens(address investorAdress, uint tokens) public returns(bool success){
-        if(!isInvestor(investorAdress)) throw;
-        investors[investorAdress].tokens += tokens;
+    function updateInvestorTokens(address investorAddress, uint tokens) public returns(bool success){
+        if(!isInvestor(investorAddress)) throw;
+        investors[investorAddress].tokens += tokens;
+        investors[investorAddress].moneyInvested = 0;
         return true;
     }
     
