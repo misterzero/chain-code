@@ -239,7 +239,7 @@ func (t *Chaincode) getProperty(stub shim.ChaincodeStubInterface, args []string)
 		return shim.Error("(getProperty) Incorrect number of arguments: " + strconv.Itoa(len(args)) + ". Expecting 2")
 	}
 
-	propertyId = args[0]
+	propertyId = args[1]
 
 	propertyBytes, err := stub.GetState(propertyId)
 	if err != nil {
