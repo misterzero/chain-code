@@ -5,7 +5,7 @@ Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-		 http://www.apache.org/licenses/LICENSE-2.0
+     http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -30,20 +30,20 @@ import (
 type Chaincode struct {}
 
 type Ownership struct {
-	Properties		        []Attribute		`json:"properties"`
+	Properties            []Attribute   `json:"properties"`
 }
 
 type Property struct {
-	TxId			string			`json:"txid"`
-	PropertyId		        string			`json:"id"`
-	SaleDate		        string			`json:"saleDate"`
-	SalePrice		        float64			`json:"salePrice"`
-	Owners			[]Attribute		`json:"owners"`
+	TxId      string      `json:"txid"`
+	PropertyId            string      `json:"id"`
+	SaleDate            string      `json:"saleDate"`
+	SalePrice           float64     `json:"salePrice"`
+	Owners      []Attribute   `json:"owners"`
 }
 
 type Attribute struct {
-	Id                          string			`json:"id"`
-	Percent                     float64			`json:"percent, string"`
+	Id                          string      `json:"id"`
+	Percent                     float64     `json:"percent, string"`
 }
 
 func (t *Chaincode) Init(stub shim.ChaincodeStubInterface) pb.Response {
@@ -199,6 +199,28 @@ func (t *Chaincode) propertyTransaction(stub shim.ChaincodeStubInterface, args [
 	err = verifyValidProperty(property)
 	if err != nil {
 		return shim.Error(err.Error())
+	}
+
+
+	propertyBytes, err := stub.GetState(propertyId)
+	if err != nil {
+		return shim.Error(err.Error())
+	}
+
+	if propertyBytes != nil {
+
+		originalProperty := Property{}
+
+		json.Unmarshal(propertyBytes, &originalProperty)
+		if err != nil {
+			return shim.Error(err.Error())
+		}
+
+		err = removePropertyFromOwners(stub, originalProperty.Owners, propertyId)
+		if err != nil {
+			return shim.Error(err.Error())
+		}
+
 	}
 
 	propertyOwnership, err := getOwnershipPropertyUpdateRequirements(stub, property.Owners)
@@ -405,7 +427,7 @@ func getOwnershipProperties(stub shim.ChaincodeStubInterface, ownershipId string
 		return ownershipBytes, err
 	}
 
-	ownershipProperties := getOwnershipPropertiesWithProppertyIdOnly(ownership.Properties)
+	ownershipProperties := getOwnershipPropertiesWithPropertyIdOnly(ownership.Properties)
 
 	ownershipPropertiesAsBytes, err := json.Marshal(ownershipProperties)
 	if err != nil{
@@ -417,7 +439,7 @@ func getOwnershipProperties(stub shim.ChaincodeStubInterface, ownershipId string
 
 }
 
-func getOwnershipPropertiesWithProppertyIdOnly(ownershipProperties []Attribute) ([]Attribute){
+func getOwnershipPropertiesWithPropertyIdOnly(ownershipProperties []Attribute) ([]Attribute){
 
 	for i := 0; i < len(ownershipProperties); i++ {
 		propertyId := ownershipProperties[i].Id
@@ -426,6 +448,48 @@ func getOwnershipPropertiesWithProppertyIdOnly(ownershipProperties []Attribute) 
 	}
 
 	return ownershipProperties
+
+}
+
+func removePropertyFromOwners(stub shim.ChaincodeStubInterface, owners []Attribute, propertyId string) error{
+
+	var err error
+
+	for i := 0; i < len(owners) ; i++ {
+
+		ownershipAsBytes, err := getOwnershipFromLedger(stub,owners[i].Id)
+		if err != nil {
+			return err
+		}
+
+		ownership := Ownership{}
+		err = json.Unmarshal(ownershipAsBytes, &ownership)
+		if err != nil {
+			return err
+		}
+
+		for i, v := range ownership.Properties {
+			if v.Id == propertyId {
+				ownership.Properties[i] = ownership.Properties[len(ownership.Properties) - 1]
+				ownership.Properties = ownership.Properties[: len(ownership.Properties) - 1]
+				break
+			}
+		}
+
+		updatedOwnershipAsBytes, err := getOwnershipAsBytes(ownership)
+		if err != nil {
+			return err
+		}
+
+		err = stub.PutState(owners[i].Id, updatedOwnershipAsBytes)
+		if err != nil {
+			err = errors.New("Unable to add Ownerhsip to Ledger,  " + string(updatedOwnershipAsBytes))
+			return err
+		}
+
+	}
+
+	return err
 
 }
 
