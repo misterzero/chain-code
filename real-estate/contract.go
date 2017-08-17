@@ -30,15 +30,15 @@ import (
 type Chaincode struct {}
 
 type Ownership struct {
-	Properties            []Attribute   `json:"properties"`
+	Properties                  []Attribute   `json:"properties"`
 }
 
 type Property struct {
-	TxId      string      `json:"txid"`
-	PropertyId            string      `json:"id"`
-	SaleDate            string      `json:"saleDate"`
-	SalePrice           float64     `json:"salePrice"`
-	Owners      []Attribute   `json:"owners"`
+	TxId                        string      `json:"txid"`
+	PropertyId                  string      `json:"id"`
+	SaleDate                    string      `json:"saleDate"`
+	SalePrice                   float64     `json:"salePrice"`
+	Owners                      []Attribute   `json:"owners"`
 }
 
 type Attribute struct {
@@ -149,13 +149,30 @@ func (t *Chaincode) getOwnershipHistory(stub shim.ChaincodeStubInterface, args [
 			}
 
 			buffer.WriteString("\"ownership\":[")
-			for i := 0; i < len(ownership.Properties); i++ {
+
+			ownershipProperties := getOwnershipPropertiesWithPropertyIdOnly(ownership.Properties)
+
+			for i := 0; i < len(ownershipProperties); i++ {
 				buffer.WriteString("{")
 				buffer.WriteString("\"id\":\"")
-				buffer.WriteString(ownership.Properties[i].Id)
+				buffer.WriteString(ownershipProperties[i].Id)
 				buffer.WriteString("\",\"percent\":")
-				percent := strconv.FormatFloat(ownership.Properties[i].Percent, 'f', 2, 64)
+				percent := strconv.FormatFloat(ownershipProperties[i].Percent, 'f', 2, 64)
 				buffer.WriteString(percent)
+				buffer.WriteString(",\"saleDate\":\"")
+
+				propertyAsBytes, err := getPropertyById(stub, "property_" + ownershipProperties[i].Id)
+
+				property := Property{}
+
+				json.Unmarshal(propertyAsBytes, &property)
+				if err != nil {
+					return shim.Error(err.Error())
+				}
+
+				buffer.WriteString(property.SaleDate)
+				buffer.WriteString("\"")
+
 				buffer.WriteString("}")
 
 				if i != len(ownership.Properties) - 1{
@@ -163,6 +180,7 @@ func (t *Chaincode) getOwnershipHistory(stub shim.ChaincodeStubInterface, args [
 				}
 			}
 			buffer.WriteString("]")
+
 		}
 
 		buffer.WriteString("}")
@@ -263,20 +281,35 @@ func (t *Chaincode) getProperty(stub shim.ChaincodeStubInterface, args []string)
 
 	propertyId = args[1]
 
-	propertyBytes, err := stub.GetState(propertyId)
+	propertyBytes, err := getPropertyById(stub, propertyId)
 	if err != nil {
 		return shim.Error(err.Error())
-	}
-
-	if propertyBytes == nil {
-		jsonResp := "{\"Error\":\"Nil amount for " + propertyId + "\"}"
-		return shim.Error(jsonResp)
 	}
 
 	jsonResp := "{\"PropertyId\":\"" + propertyId + "\",\"Property Struct\":\"" + string(propertyBytes) + "\"}"
 	fmt.Printf("Query Response:%s\n", jsonResp)
 
 	return shim.Success(propertyBytes)
+
+}
+
+func getPropertyById(stub shim.ChaincodeStubInterface, propertyId string) ([]byte, error){
+
+	var err error
+
+	propertyBytes, err := stub.GetState(propertyId)
+	if err != nil {
+		return propertyBytes, err
+	}
+
+	if propertyBytes == nil {
+		jsonResp := "{\"Error\":\"Nil amount for " + propertyId + "\"}"
+		err = errors.New(jsonResp)
+
+		return propertyBytes, err
+	}
+
+	return propertyBytes, err
 
 }
 
