@@ -327,7 +327,6 @@ func handleExpectedSuccess(t *testing.T, stub *shim.MockStub, argument string, o
 func handleExpectedFailures(t *testing.T, stub *shim.MockStub, argument string, outputMessage string, errorMessage string, invalidArgs [][]byte, attemptedPayload string){
 
 	res := stub.MockInvoke(argument, invalidArgs)
-	fmt.Print("res: " + res.String())
 
 	if res.Status != errorStatus {
 		msg := outputMessage +  "[res.Status=" + strconv.FormatInt(int64(res.Status), 10) + "]"
