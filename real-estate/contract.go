@@ -30,22 +30,25 @@ import (
 type Chaincode struct {}
 
 type Ownership struct {
-	Properties                  []Attribute   `json:"properties"`
+	Properties                  []Attribute   	`json:"properties"`
 }
 
 type Property struct {
-	TxId                        string      `json:"txid"`
-	PropertyId                  string      `json:"id"`
-	SaleDate                    string      `json:"saleDate"`
-	SalePrice                   float64     `json:"salePrice"`
-	Owners                      []Attribute   `json:"owners"`
+	TxId                        string      	`json:"txid"`
+	PropertyId                  string      	`json:"id"`
+	SaleDate                    string      	`json:"saleDate"`
+	SalePrice                   float64     	`json:"salePrice"`
+	Owners                      []Attribute   	`json:"owners"`
 }
 
 type Attribute struct {
-	Id                          string      `json:"id"`
-	Percent                     float64     `json:"percent, string"`
+	Id                          string      	`json:"id"`
+	SaleDate 					string			`json:"saleDate"`
+	Name						string			`json:"name"`
+	Percent                     float64     	`json:"percent"`
 }
 
+//chaincode methods
 func (t *Chaincode) Init(stub shim.ChaincodeStubInterface) pb.Response {
 
 	//No initialization requirements of chain code required at this time
@@ -88,7 +91,7 @@ func (t *Chaincode) getOwnership(stub shim.ChaincodeStubInterface, args []string
 
 	ownershipId := args[1]
 
-	ownershipPropertiesAsBytes, err := getOwnershipProperties(stub, ownershipId)
+	ownershipPropertiesAsBytes, err := getOwnershipPropertiesAsBytes(stub, ownershipId)
 	if err != nil {
 		return shim.Error(err.Error())
 	}
@@ -141,8 +144,8 @@ func (t *Chaincode) getOwnershipHistory(stub shim.ChaincodeStubInterface, args [
 		if response.IsDelete {
 			buffer.WriteString("null")
 		} else {
-			ownership := Ownership{}
 
+			ownership := Ownership{}
 			err := json.Unmarshal(response.Value, &ownership)
 			if err != nil {
 				return shim.Error(err.Error())
@@ -150,7 +153,7 @@ func (t *Chaincode) getOwnershipHistory(stub shim.ChaincodeStubInterface, args [
 
 			buffer.WriteString("\"ownership\":[")
 
-			ownershipProperties := getOwnershipPropertiesWithPropertyIdOnly(ownership.Properties)
+			ownershipProperties := getOwnershipPropertiesIdValues(ownership.Properties)
 
 			for i := 0; i < len(ownershipProperties); i++ {
 				buffer.WriteString("{")
@@ -161,16 +164,15 @@ func (t *Chaincode) getOwnershipHistory(stub shim.ChaincodeStubInterface, args [
 				buffer.WriteString(percent)
 				buffer.WriteString(",\"saleDate\":\"")
 
-				propertyAsBytes, err := getPropertyById(stub, "property_" + ownershipProperties[i].Id)
+				propertyAsBytes, err := getPropertyFromLedger(stub, "property_" + ownershipProperties[i].Id)
 
 				property := Property{}
-
 				json.Unmarshal(propertyAsBytes, &property)
 				if err != nil {
 					return shim.Error(err.Error())
 				}
 
-				buffer.WriteString(property.SaleDate)
+				buffer.WriteString(ownershipProperties[i].SaleDate)
 				buffer.WriteString("\"")
 
 				buffer.WriteString("}")
@@ -179,6 +181,7 @@ func (t *Chaincode) getOwnershipHistory(stub shim.ChaincodeStubInterface, args [
 					buffer.WriteString(",")
 				}
 			}
+
 			buffer.WriteString("]")
 
 		}
@@ -219,49 +222,22 @@ func (t *Chaincode) propertyTransaction(stub shim.ChaincodeStubInterface, args [
 		return shim.Error(err.Error())
 	}
 
+	err = confirmValidPercentage(property.Owners)
+	if err != nil {
+		return shim.Error(err.Error())
+	}
 
 	propertyBytes, err := stub.GetState(propertyId)
 	if err != nil {
 		return shim.Error(err.Error())
 	}
 
-	if propertyBytes != nil {
-
-		originalProperty := Property{}
-
-		json.Unmarshal(propertyBytes, &originalProperty)
-		if err != nil {
-			return shim.Error(err.Error())
-		}
-
-		err = removePropertyFromOwners(stub, originalProperty.Owners, propertyId)
-		if err != nil {
-			return shim.Error(err.Error())
-		}
-
-	}
-
-	propertyOwnership, err := getOwnershipPropertyUpdateRequirements(stub, property.Owners)
+	err = updatePropertyOwnership(stub, property, propertyBytes, propertyId)
 	if err != nil {
 		return shim.Error(err.Error())
 	}
 
-	err = confirmValidPercentage(property.Owners)
-	if err != nil {
-		return shim.Error(err.Error())
-	}
-
-	propertyAsBytes, err := getPropertyAsBytes(property)
-	if err != nil {
-		return shim.Error(err.Error())
-	}
-
-	err = stub.PutState(propertyId, propertyAsBytes)
-	if err != nil {
-		return shim.Error(err.Error())
-	}
-
-	err = updateOwnershipProperties(stub, propertyId, propertyOwnership)
+	err = addPropertyToLedger(stub, property, propertyId)
 	if err != nil {
 		return shim.Error(err.Error())
 	}
@@ -281,7 +257,7 @@ func (t *Chaincode) getProperty(stub shim.ChaincodeStubInterface, args []string)
 
 	propertyId = args[1]
 
-	propertyBytes, err := getPropertyById(stub, propertyId)
+	propertyBytes, err := getPropertyFromLedger(stub, propertyId)
 	if err != nil {
 		return shim.Error(err.Error())
 	}
@@ -290,26 +266,6 @@ func (t *Chaincode) getProperty(stub shim.ChaincodeStubInterface, args []string)
 	fmt.Printf("Query Response:%s\n", jsonResp)
 
 	return shim.Success(propertyBytes)
-
-}
-
-func getPropertyById(stub shim.ChaincodeStubInterface, propertyId string) ([]byte, error){
-
-	var err error
-
-	propertyBytes, err := stub.GetState(propertyId)
-	if err != nil {
-		return propertyBytes, err
-	}
-
-	if propertyBytes == nil {
-		jsonResp := "{\"Error\":\"Nil amount for " + propertyId + "\"}"
-		err = errors.New(jsonResp)
-
-		return propertyBytes, err
-	}
-
-	return propertyBytes, err
 
 }
 
@@ -402,191 +358,278 @@ func (t *Chaincode) getPropertyHistory(stub shim.ChaincodeStubInterface, args []
 
 }
 
-func getOwnershipFromLedger(stub shim.ChaincodeStubInterface, ownershipId string) ([]byte, error){
+//property transaction methods
+func updatePropertyOwnership(stub shim.ChaincodeStubInterface, newProperty Property, originalPropertyBytes []byte, propertyId string) error{
+	var err error
+	var sameOwnersList = []Attribute{}
+	var updateNewOwnersList = []Attribute{}
+	var updatedOldOwnersList = []Attribute{}
 
-	ownershipBytes, err := stub.GetState(ownershipId)
+	originalProperty := Property{}
+	if originalPropertyBytes != nil {
+
+		err =json.Unmarshal(originalPropertyBytes, &originalProperty)
+		if err != nil {
+			err = errors.New("Unable to create originalPropertyBytes: " + string(originalPropertyBytes) + ". " + err.Error())
+			return err
+		}
+
+	}
+
+	sameOwnersList, updateNewOwnersList, updatedOldOwnersList = getOwnershipLists(newProperty.Owners, originalProperty.Owners)
+
+	err = removePropertyFromOwnership(stub, updatedOldOwnersList, propertyId)
 	if err != nil {
-		err = errors.New("Unable to retrieve ownershipId: " + ownershipId + ". " + err.Error())
-	}
-	if ownershipBytes == nil {
-		err = errors.New("Nil value for ownershipId: " + ownershipId)
+		return err
 	}
 
-	return ownershipBytes, err
+	err = addPropertyToOwnership(stub, updateNewOwnersList, newProperty)
+	if err != nil {
+		return err
+	}
+
+	err = updatePropertyForSameOwnership(stub, sameOwnersList, newProperty)
+	if err != nil {
+		return err
+	}
+
+	return err
+
 }
 
-func getOwnershipPropertyUpdateRequirements(stub shim.ChaincodeStubInterface, propertyOwners[]Attribute) (map[string][]interface{}, error){
+func updatePropertyForSameOwnership(stub shim.ChaincodeStubInterface, sameOwnersList []Attribute, newProperty Property) error{
 
-	var ownerAndPercentageData = make(map[string][]interface{})
 	var err error
+	var propertyAttribute = Attribute{}
 
-	for i := 0; i < len(propertyOwners); i++ {
-		var ownershipId string
-		var propertyOwnerBytes []byte
-		ownershipId = propertyOwners[i].Id
+	for i := 0; i < len(sameOwnersList); i++ {
 
-		propertyOwnerBytes, _ = getOwnershipFromLedger(stub, ownershipId)
-		if propertyOwnerBytes == nil {
+		ownershipAsBytes, err := getOwnershipFromLedger(stub, sameOwnersList[i].Id)
 
-			ownership := Ownership{}
-			propertyOwnerBytes, err = getOwnershipAsBytes(ownership)
+		ownership := Ownership{}
+		if ownershipAsBytes != nil {
+
+			err = json.Unmarshal(ownershipAsBytes, &ownership)
 			if err != nil {
-				return ownerAndPercentageData, err
+				return err
 			}
 
+			for _, v := range ownership.Properties {
+
+				if v.Id == newProperty.PropertyId {
+
+					ownership.Properties = removePropertyFromOwnershipList(ownership.Properties, newProperty.PropertyId)
+
+					err = addOwnershipToLedger(stub,ownership, sameOwnersList[i].Id)
+					if err != nil {
+						return err
+					}
+
+					propertyAttribute.Id = newProperty.PropertyId
+					propertyAttribute.SaleDate = newProperty.SaleDate
+					propertyAttribute.Percent = sameOwnersList[i].Percent
+					propertyAttribute.Name = sameOwnersList[i].Name
+
+					for j:= 0; j < len(newProperty.Owners); j++ {
+
+						if newProperty.Owners[j].Id == sameOwnersList[i].Id {
+							propertyAttribute.Percent = newProperty.Owners[j].Percent
+						}
+
+					}
+
+					ownership.Properties = append(ownership.Properties, propertyAttribute)
+
+					err = addOwnershipToLedger(stub, ownership, sameOwnersList[i].Id)
+					if err != nil {
+						return err
+					}
+
+				}
+
+			}
+
+		}else {
+			err = nil
 		}
 
-		var ownerBytesAndPercentage []interface{} = []interface{}{propertyOwnerBytes, propertyOwners[i].Percent}
-		ownerAndPercentageData[propertyOwners[i].Id] = ownerBytesAndPercentage
-
 	}
 
-	return ownerAndPercentageData, err
+	return err
 
 }
 
-func getOwnershipProperties(stub shim.ChaincodeStubInterface, ownershipId string ) ([]byte, error){
+func addPropertyToOwnership(stub shim.ChaincodeStubInterface, newOwnersList []Attribute, newProperty Property) error{
 
 	var err error
+	var propertyAttribute = Attribute{}
 
-	ownershipBytes, err := getOwnershipFromLedger(stub, ownershipId)
-	if err != nil {
-		return ownershipBytes, err
-	}
+	for i := 0; i < len(newOwnersList); i++ {
 
-	ownership := Ownership{}
-	err = json.Unmarshal(ownershipBytes, &ownership)
-	if err != nil {
-		return ownershipBytes, err
-	}
+		ownershipAsBytes, err := getOwnershipFromLedger(stub, newOwnersList[i].Id)
 
-	ownershipProperties := getOwnershipPropertiesWithPropertyIdOnly(ownership.Properties)
-
-	ownershipPropertiesAsBytes, err := json.Marshal(ownershipProperties)
-	if err != nil{
-		err = errors.New("Unable to convert ownership properties to json string " + string(ownershipPropertiesAsBytes))
-		return ownershipPropertiesAsBytes, err
-	}
-
-	return ownershipPropertiesAsBytes, err
-
-}
-
-func getOwnershipPropertiesWithPropertyIdOnly(ownershipProperties []Attribute) ([]Attribute){
-
-	for i := 0; i < len(ownershipProperties); i++ {
-		propertyId := ownershipProperties[i].Id
-		propertyNumber := strings.Replace(propertyId,"property_","",-1)
-		ownershipProperties[i].Id = propertyNumber
-	}
-
-	return ownershipProperties
-
-}
-
-func removePropertyFromOwners(stub shim.ChaincodeStubInterface, owners []Attribute, propertyId string) error{
-
-	var err error
-
-	for i := 0; i < len(owners) ; i++ {
-
-		ownershipAsBytes, err := getOwnershipFromLedger(stub,owners[i].Id)
-		if err != nil {
-			return err
-		}
+		propertyAttribute.Id = newProperty.PropertyId
+		propertyAttribute.SaleDate = newProperty.SaleDate
+		propertyAttribute.Percent = newOwnersList[i].Percent
+		propertyAttribute.Name = newOwnersList[i].Name
 
 		ownership := Ownership{}
-		err = json.Unmarshal(ownershipAsBytes, &ownership)
+		if ownershipAsBytes != nil {
+
+			err = json.Unmarshal(ownershipAsBytes, &ownership)
+			if err != nil {
+				return err
+			}
+
+		} else {
+			err = nil
+		}
+
+		ownership.Properties = append(ownership.Properties, propertyAttribute)
+
+		err = addOwnershipToLedger(stub, ownership, newOwnersList[i].Id)
 		if err != nil {
 			return err
 		}
 
-		for i, v := range ownership.Properties {
-			if v.Id == propertyId {
-				ownership.Properties[i] = ownership.Properties[len(ownership.Properties) - 1]
-				ownership.Properties = ownership.Properties[: len(ownership.Properties) - 1]
+	}
+
+	return err
+
+}
+
+func removePropertyFromOwnership(stub shim.ChaincodeStubInterface, oldOwners []Attribute, propertyId string) error{
+
+	var err error
+
+	for i := 0; i < len(oldOwners); i++ {
+
+		ownershipAsBytes, err := getOwnershipFromLedger(stub, oldOwners[i].Id)
+
+		ownership := Ownership{}
+		if ownershipAsBytes != nil {
+
+			err = json.Unmarshal(ownershipAsBytes, &ownership)
+			if err != nil {
+				return err
+			}
+
+			ownership.Properties = removePropertyFromOwnershipList(ownership.Properties, propertyId)
+
+		}else {
+			err = nil
+		}
+
+		err = addOwnershipToLedger(stub, ownership, oldOwners[i].Id)
+		if err != nil {
+			return err
+		}
+
+	}
+
+	return err
+
+}
+
+func removePropertyFromOwnershipList(properties []Attribute, propertyId string) []Attribute{
+
+	for i, v := range properties {
+		if v.Id == propertyId {
+			properties[i] = properties[len(properties) - 1]
+			properties = properties[: len(properties) - 1]
+		}
+	}
+
+	return properties
+}
+
+func getOwnershipLists(newOwners []Attribute, oldOwners []Attribute) ([]Attribute, []Attribute, []Attribute){
+	var sameOwners = []Attribute{}
+	var updatedNewOwners = []Attribute{}
+	var updatedOldOwners = []Attribute{}
+
+	if len(newOwners) >= len(oldOwners) {
+		sameOwners, updatedNewOwners, updatedOldOwners = buildOwnershipLists(newOwners, oldOwners)
+	} else {
+		sameOwners, updatedOldOwners, updatedNewOwners = buildOwnershipLists(oldOwners, newOwners)
+	}
+
+	return sameOwners, updatedNewOwners, updatedOldOwners
+
+}
+
+func buildOwnershipLists(longestOwnerList []Attribute, shortestOwnerList []Attribute) ([]Attribute, []Attribute, []Attribute){
+
+	var sameOwnersList = []Attribute{}
+	var updatedLongestOwnerList = []Attribute{}
+	var updatedShortestOwnerList = []Attribute{}
+
+	sameOwnersList, updatedLongestOwnerList = getLongestAndSameOwnershipLists(longestOwnerList, shortestOwnerList)
+
+	updatedShortestOwnerList = getShortestOwnershipList(shortestOwnerList, sameOwnersList)
+
+	return sameOwnersList, updatedLongestOwnerList, updatedShortestOwnerList
+
+}
+
+func getLongestAndSameOwnershipLists(longestOwnersList []Attribute, shortestOwnersList []Attribute) ([]Attribute, []Attribute){
+
+	var sameOwners = []Attribute{}
+	var updatedLongestOwnersList = []Attribute{}
+
+	for i := 0; i < len(longestOwnersList); i++ {
+		var foundMatch = false
+
+		for j := 0; j< len(shortestOwnersList); j++ {
+
+			if longestOwnersList[i].Id == shortestOwnersList[j].Id {
+
+				sameOwners = append(sameOwners, longestOwnersList[i])
+				foundMatch = true
 				break
+
+			} else {
+				foundMatch = false
 			}
+
 		}
 
-		updatedOwnershipAsBytes, err := getOwnershipAsBytes(ownership)
-		if err != nil {
-			return err
-		}
-
-		err = stub.PutState(owners[i].Id, updatedOwnershipAsBytes)
-		if err != nil {
-			err = errors.New("Unable to add Ownerhsip to Ledger,  " + string(updatedOwnershipAsBytes))
-			return err
+		if !foundMatch{
+			updatedLongestOwnersList = append(updatedLongestOwnersList, longestOwnersList[i])
 		}
 
 	}
 
-	return err
+	return sameOwners, updatedLongestOwnersList
 
 }
 
-func updateOwnershipProperties(stub shim.ChaincodeStubInterface, propertyId string, propertyOwnership map[string][]interface{}) (error){
+func getShortestOwnershipList(shortestOwnersList []Attribute, sameOwnersList []Attribute) ([]Attribute){
 
-	var err error
+	var updatedShortestOwnersList = []Attribute{}
 
-	for k, _ := range propertyOwnership {
+	for k := 0; k <len(shortestOwnersList); k++ {
 
-		ownership := Ownership{}
-		err = json.Unmarshal(propertyOwnership[k][0].([]byte), &ownership)
-		if err != nil {
-			err = errors.New("Unable to convert byte array to ownership struct,  " + string(propertyOwnership[k][0].([]byte)))
-			return err
+		var foundMatch = false
+
+		for m:= 0; m < len(sameOwnersList); m++ {
+
+			if shortestOwnersList[k].Id == sameOwnersList[m].Id {
+				foundMatch = true
+				break
+			} else {
+				foundMatch = false
+			}
+
 		}
 
-		ownershipPropertyAttribute := Attribute{}
-		ownershipPropertyAttribute.Id = propertyId
-		ownershipPropertyAttribute.Percent = propertyOwnership[k][1].(float64)
-
-		ownership.Properties = append(ownership.Properties, ownershipPropertyAttribute)
-
-		ownershipAsBytes, err := getOwnershipAsBytes(ownership)
-		if err != nil {
-			return err
-		}
-
-		err = stub.PutState(k, ownershipAsBytes)
-		if err != nil {
-			err = errors.New("Unable to add Ownerhsip to Ledger,  " + string(ownershipAsBytes))
-			return err
+		if !foundMatch {
+			updatedShortestOwnersList = append(updatedShortestOwnersList, shortestOwnersList[k])
 		}
 
 	}
 
-	return err
-
-}
-
-func getPropertyAsBytes(property Property) ([]byte, error){
-
-	var propertyBytes []byte
-	var err error
-
-	propertyBytes, err = json.Marshal(property)
-	if err != nil{
-		err = errors.New("Unable to convert property to json string " + string(propertyBytes))
-	}
-
-	return propertyBytes, err
-
-}
-
-func getOwnershipAsBytes(ownership Ownership) ([]byte, error){
-
-	var ownershipBytes []byte
-	var err error
-
-	ownershipBytes, err = json.Marshal(ownership)
-	if err != nil{
-		err = errors.New("Unable to convert ownership to json string " + string(ownershipBytes))
-	}
-
-	return ownershipBytes, err
+	return updatedShortestOwnersList
 
 }
 
@@ -624,6 +667,137 @@ func confirmValidPercentage(buyers []Attribute) error{
 	}
 
 	return err
+
+}
+
+//helper methods
+func addOwnershipToLedger(stub shim.ChaincodeStubInterface, ownership Ownership, ownershipId string) error{
+
+	updatedOwnershipAsBytes, err := getOwnershipAsBytes(ownership)
+	if err != nil {
+		return err
+	}
+
+	err = stub.PutState(ownershipId, updatedOwnershipAsBytes)
+	if err != nil {
+		err = errors.New("Unable to add property for new Owners,  " + string(updatedOwnershipAsBytes))
+		return err
+	}
+
+	return err
+}
+
+func getOwnershipFromLedger(stub shim.ChaincodeStubInterface, ownershipId string) ([]byte, error){
+
+	ownershipBytes, err := stub.GetState(ownershipId)
+	if err != nil {
+		err = errors.New("Unable to retrieve ownershipId: " + ownershipId + ". " + err.Error())
+	}
+	if ownershipBytes == nil {
+		err = errors.New("Nil value for ownershipId: " + ownershipId)
+	}
+
+	return ownershipBytes, err
+}
+
+func getOwnershipAsBytes(ownership Ownership) ([]byte, error){
+
+	var ownershipBytes []byte
+	var err error
+
+	ownershipBytes, err = json.Marshal(ownership)
+	if err != nil{
+		err = errors.New("Unable to convert ownership to json string " + string(ownershipBytes))
+	}
+
+	return ownershipBytes, err
+
+}
+
+func getOwnershipPropertiesAsBytes(stub shim.ChaincodeStubInterface, ownershipId string ) ([]byte, error){
+
+	var err error
+
+	ownershipBytes, err := getOwnershipFromLedger(stub, ownershipId)
+	if err != nil {
+		return ownershipBytes, err
+	}
+
+	ownership := Ownership{}
+	err = json.Unmarshal(ownershipBytes, &ownership)
+	if err != nil {
+		return ownershipBytes, err
+	}
+
+	ownershipProperties := getOwnershipPropertiesIdValues(ownership.Properties)
+
+	ownershipPropertiesAsBytes, err := json.Marshal(ownershipProperties)
+	if err != nil{
+		err = errors.New("Unable to convert ownership properties to json string " + string(ownershipPropertiesAsBytes))
+		return ownershipPropertiesAsBytes, err
+	}
+
+	return ownershipPropertiesAsBytes, err
+
+}
+
+func getOwnershipPropertiesIdValues(ownershipProperties []Attribute) ([]Attribute){
+
+	for i := 0; i < len(ownershipProperties); i++ {
+		propertyId := ownershipProperties[i].Id
+		propertyNumber := strings.Replace(propertyId,"property_","",-1)
+		ownershipProperties[i].Id = propertyNumber
+	}
+
+	return ownershipProperties
+
+}
+
+func addPropertyToLedger(stub shim.ChaincodeStubInterface, property Property, propertyId string) error{
+
+	propertyAsBytes, err := getPropertyAsBytes(property)
+	if err != nil {
+		return err
+	}
+
+	err = stub.PutState(propertyId, propertyAsBytes)
+	if err != nil {
+		return err
+	}
+
+	return err
+
+}
+
+func getPropertyFromLedger(stub shim.ChaincodeStubInterface, propertyId string) ([]byte, error){
+
+	var err error
+
+	propertyBytes, err := stub.GetState(propertyId)
+	if err != nil {
+		return propertyBytes, err
+	}
+
+	if propertyBytes == nil {
+		err = errors.New("{\"Error\":\"Nil amount for " + propertyId + "\"}")
+		return propertyBytes, err
+	}
+
+	return propertyBytes, err
+
+}
+
+func getPropertyAsBytes(property Property) ([]byte, error){
+
+	var propertyBytes []byte
+	var err error
+
+	propertyBytes, err = json.Marshal(property)
+	if err != nil{
+		err = errors.New("Unable to convert property to json string " + string(propertyBytes))
+	}
+
+	return propertyBytes, err
 
 }
 
