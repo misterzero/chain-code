@@ -24,7 +24,6 @@ import (
 	"strings"
 )
 
-//TODO remove 3agrs and 4args methods
 func TestGetOwnershipMissingOwnership(t *testing.T){
 
 	stub := getStub()
@@ -103,12 +102,16 @@ func TestPropertyTransactionExtraArgs(t *testing.T) {
 
 	_, propertyAsString := createProperty(property_1, dateString, 1000, getValidOwnersList())
 
-	args := [][]byte{[]byte(propertyTransaction), []byte(propertyTransaction), []byte(property_1), []byte(propertyAsString)}
-	args = append(args, []byte(invalidArgument))
+	args := [][]byte{
+		[]byte(propertyTransaction),
+		[]byte(propertyTransaction),
+		[]byte(property_1),
+		[]byte(propertyAsString),
+		[]byte("extraArg")}
 
-	message := " | " + propertyTransaction + " with args: {" + string(args[1]) + ", " + string(args[2]) + ", " + string(args[3]) + ", " + string(args[4]) + "}, did not fail. "
+	failedTestMessage := " | " + propertyTransaction + " with args: {" + string(args[1]) + ", " + string(args[2]) + ", " + string(args[3]) + ", " + string(args[4]) + "}, did not fail. "
 
-	handleExpectedFailures(t, stub, propertyTransaction, message, args, propertyAsString, incorrectNumberOfArgs)
+	handleExpectedFailures(t, stub, propertyTransaction, failedTestMessage, args, propertyAsString, incorrectNumberOfArgs)
 
 }
 
@@ -118,10 +121,15 @@ func TestPropertyTransactionStringAsSalePrice(t *testing.T) {
 
 	validJson := `{"saleDate":"2017-06-28T21:57:16","salePrice":"1000","owners":[{"id":"ownership_3","percentage":0.45},{"id":"ownerhip_2","percentage":0.55}]}`
 
-	args := [][]byte{[]byte(propertyTransaction), []byte(propertyTransaction), []byte(property_1), []byte(validJson)}
-	message := " | " + propertyTransaction + " with args: {" + string(args[1]) + "," + string(args[2]) + "}, did not fail. "
+	args := [][]byte{
+		[]byte(propertyTransaction),
+		[]byte(propertyTransaction),
+		[]byte(property_1),
+		[]byte(validJson)}
 
-	handleExpectedFailures(t, stub, propertyTransaction, message, args, validJson, cannotUnmarshalStringIntoFloat64)
+	failedTestMessage := " | " + propertyTransaction + " with args: {" + string(args[1]) + "," + string(args[2]) + "}, did not fail. "
+
+	handleExpectedFailures(t, stub, propertyTransaction, failedTestMessage, args, validJson, cannotUnmarshalStringIntoFloat64)
 
 }
 
@@ -131,10 +139,15 @@ func TestPropertyTransactionMissingSaleDate(t *testing.T) {
 
 	missingSaleDateJson := `{"salePrice":1000,"owners":[{"id":"ownership_3","percentage":0.45},{"id":"ownership_2","percentage":0.55}]}`
 
-	args := [][]byte{[]byte(propertyTransaction), []byte(propertyTransaction), []byte(property_1), []byte(missingSaleDateJson)}
-	message := " | " + propertyTransaction + " with args: {" + string(args[1]) + "," + string(args[2]) + "}, did not fail. "
+	args := [][]byte{
+		[]byte(propertyTransaction),
+		[]byte(propertyTransaction),
+		[]byte(property_1),
+		[]byte(missingSaleDateJson)}
 
-	handleExpectedFailures(t, stub, propertyTransaction, message, args, missingSaleDateJson, saleDateRequired)
+	failedTestMessage := " | " + propertyTransaction + " with args: {" + string(args[1]) + "," + string(args[2]) + "}, did not fail. "
+
+	handleExpectedFailures(t, stub, propertyTransaction, failedTestMessage, args, missingSaleDateJson, saleDateRequired)
 
 }
 
@@ -144,10 +157,15 @@ func TestPropertyTransactionNegativeSalePrice(t *testing.T) {
 
 	negativeSalePriceJson := `{"saleDate":"2017-06-28T21:57:16","salePrice":-1,"owners":[{"id":"ownership_3","percentage":0.45},{"id":"ownerhip_2","percentage":0.55}]}`
 
-	args := [][]byte{[]byte(propertyTransaction), []byte(propertyTransaction), []byte(property_1), []byte(negativeSalePriceJson)}
-	message := " | " + propertyTransaction + " with args: {" + string(args[1]) + "," + string(args[2]) + "}, did not fail. "
+	args := [][]byte{
+		[]byte(propertyTransaction),
+		[]byte(propertyTransaction),
+		[]byte(property_1),
+		[]byte(negativeSalePriceJson)}
 
-	handleExpectedFailures(t, stub, propertyTransaction, message, args, negativeSalePriceJson, salePriceMustBeGreaterThan0)
+	failedTestMessage := " | " + propertyTransaction + " with args: {" + string(args[1]) + "," + string(args[2]) + "}, did not fail. "
+
+	handleExpectedFailures(t, stub, propertyTransaction, failedTestMessage, args, negativeSalePriceJson, salePriceMustBeGreaterThan0)
 
 }
 
@@ -157,10 +175,15 @@ func TestPropertyTransactionNoOwners(t *testing.T) {
 
 	noOwnersJson := `{"saleDate":"2017-06-28T21:57:16","salePrice":1000,"owners":[]}`
 
-	args := [][]byte{[]byte(propertyTransaction), []byte(propertyTransaction), []byte(property_1), []byte(noOwnersJson)}
-	message:= " | " + propertyTransaction + " with args: {" + string(args[1]) + "," + string(args[2]) + "}, did not fail. "
+	args := [][]byte{
+		[]byte(propertyTransaction),
+		[]byte(propertyTransaction),
+		[]byte(property_1),
+		[]byte(noOwnersJson)}
 
-	handleExpectedFailures(t, stub, propertyTransaction, message, args, noOwnersJson, atLeastOneOwnerIsRequired)
+	failedTestMessage := " | " + propertyTransaction + " with args: {" + string(args[1]) + "," + string(args[2]) + "}, did not fail. "
+
+	handleExpectedFailures(t, stub, propertyTransaction, failedTestMessage, args, noOwnersJson, atLeastOneOwnerIsRequired)
 
 }
 
@@ -170,10 +193,15 @@ func TestPropertyTransactionTooLowTotalOwnerPercentage(t *testing.T) {
 
 	tooLowOwnerPercentage := `{"saleDate":"2017-06-28T21:57:16","salePrice":1000,"owners":[{"id":"ownership_3","percentage":0.45},{"id":"ownerhip_2","percentage":0.50}]}`
 
-	args := [][]byte{[]byte(propertyTransaction), []byte(propertyTransaction), []byte(property_1), []byte(tooLowOwnerPercentage)}
-	message := " | " + propertyTransaction + " with args: {" + string(args[1]) + "," + string(args[2]) + "}, did not fail. "
+	args := [][]byte{
+		[]byte(propertyTransaction),
+		[]byte(propertyTransaction),
+		[]byte(property_1),
+		[]byte(tooLowOwnerPercentage)}
 
-	handleExpectedFailures(t, stub, propertyTransaction, message, args, tooLowOwnerPercentage, totalPercentageCanNotBeGreaterThan1)
+	failedTestMessage := " | " + propertyTransaction + " with args: {" + string(args[1]) + "," + string(args[2]) + "}, did not fail. "
+
+	handleExpectedFailures(t, stub, propertyTransaction, failedTestMessage, args, tooLowOwnerPercentage, totalPercentageCanNotBeGreaterThan1)
 
 }
 
@@ -183,10 +211,15 @@ func TestPropertyTransactionTooHighTotalOwnerPercentage(t *testing.T) {
 
 	tooHighOwnerPercentage := `{"saleDate":"2017-06-28T21:57:16","salePrice":1000,"owners":[{"id":"ownership_3","percentage":0.45},{"id":"ownerhip_2","percentage":0.70}]}`
 
-	args := [][]byte{[]byte(propertyTransaction), []byte(propertyTransaction), []byte(property_1), []byte(tooHighOwnerPercentage)}
-	message := " | " + propertyTransaction + " with args: {" + string(args[1]) + "," + string(args[2]) + "}, did not fail. "
+	args := [][]byte{
+		[]byte(propertyTransaction),
+		[]byte(propertyTransaction),
+		[]byte(property_1),
+		[]byte(tooHighOwnerPercentage)}
 
-	handleExpectedFailures(t, stub, propertyTransaction, message, args, tooHighOwnerPercentage, totalPercentageCanNotBeGreaterThan1)
+	failedTestMessage := " | " + propertyTransaction + " with args: {" + string(args[1]) + "," + string(args[2]) + "}, did not fail. "
+
+	handleExpectedFailures(t, stub, propertyTransaction, failedTestMessage, args, tooHighOwnerPercentage, totalPercentageCanNotBeGreaterThan1)
 
 }
 
@@ -209,10 +242,15 @@ func TestGetPropertyExtraArgs(t *testing.T){
 
 	invokePropertyTransaction(t, stub, property.PropertyId, propertyString)
 
-	args := [][]byte{[]byte(getProperty), []byte(getProperty), []byte(property.PropertyId), []byte(propertyString)}
-	message:= " | " + getProperty + " with args: {" + string(args[1]) + "," + string(args[2]) + "," + string(args[3]) + "}, did not fail. "
+	args := [][]byte{
+		[]byte(getProperty),
+		[]byte(getProperty),
+		[]byte(property.PropertyId),
+		[]byte(propertyString)}
 
-	handleExpectedFailures(t, stub, getProperty, message, args, propertyString, incorrectNumberOfArgs)
+	failedTestMessage := " | " + getProperty + " with args: {" + string(args[1]) + "," + string(args[2]) + "," + string(args[3]) + "}, did not fail. "
+
+	handleExpectedFailures(t, stub, getProperty, failedTestMessage, args, propertyString, incorrectNumberOfArgs)
 
 }
 
@@ -220,10 +258,14 @@ func TestGetPropertyMissingProperty(t *testing.T){
 
 	stub := getStub()
 
-	args := [][]byte{[]byte(getProperty), []byte(getProperty), []byte(property_1)}
-	message := " | " + getProperty + " with args: {" + property_1 + "}, did not fail. "
+	args := [][]byte{
+		[]byte(getProperty),
+		[]byte(getProperty),
+		[]byte(property_1)}
 
-	handleExpectedFailures(t, stub, getProperty, message, args, emptyPropertyJson, nilAmountFor)
+	failedTestMessage := " | " + getProperty + " with args: {" + property_1 + "}, did not fail. "
+
+	handleExpectedFailures(t, stub, getProperty, failedTestMessage, args, emptyPropertyJson, nilAmountFor)
 
 }
 
@@ -271,38 +313,16 @@ func handleExpectedFailures(t *testing.T, stub *shim.MockStub, argument string, 
 
 }
 
-//func handleExpectedFailures(t *testing.T, stub *shim.MockStub, argument string, outputMessage string, args [][]byte, attemptedPayload string, errorMessage string,){
-//
-//	res := stub.MockInvoke(argument, args)
-//
-//	//TODO remove
-//	fmt.Println(res)
-//	t.FailNow()
-//
-//	if res.Status != errorStatus {
-//		msg := outputMessage +  "[res.Status=" + strconv.FormatInt(int64(res.Status), 10) + "]"
-//		fmt.Println(msg)
-//		t.FailNow()
-//	}
-//	if !strings.Contains(res.Message, errorMessage) {
-//		msg := outputMessage + "[res.Message=" + string(res.Message) + "]"
-//		fmt.Println(msg)
-//		t.FailNow()
-//	}
-//	if string(res.Payload) == attemptedPayload{
-//		msg := outputMessage + "[res.Payload=" + string(res.Payload) + "]"
-//		fmt.Println(msg)
-//		t.FailNow()
-//	}
-//
-//}
-
 func checkGetProperty(t *testing.T, stub *shim.MockStub, property Property, propertyString string){
 
-	args := [][]byte{[]byte(getProperty), []byte(getProperty), []byte(property.PropertyId)}
-	message:= " | " + getProperty + " with args: {" + string(args[1]) + "}, failed. "
+	args := [][]byte{
+		[]byte(getProperty),
+		[]byte(getProperty),
+		[]byte(property.PropertyId)}
 
-	handleExpectedSuccess(t, stub, getProperty, message, args, propertyString)
+	failedTestMessage := " | " + getProperty + " with args: {" + string(args[1]) + "}, failed. "
+
+	handleExpectedSuccess(t, stub, getProperty, failedTestMessage, args, propertyString)
 
 }
 
@@ -324,21 +344,30 @@ func checkPropertyState(t *testing.T, stub *shim.MockStub, property Property, pr
 
 func invokeGetOwnership(t *testing.T, stub *shim.MockStub,ownershipId string, payload string){
 
-	args := [][]byte{[]byte(getOwnership), []byte(getOwnership), []byte(ownershipId)}
-	message:= " | " + getOwnership + " with args: {" + string(args[0]) + ", "+ string(args[1]) + ", " + string(args[2]) + "}, failed. "
+	args := [][]byte{
+		[]byte(getOwnership),
+		[]byte(getOwnership),
+		[]byte(ownershipId)}
 
-	handleExpectedSuccess(t, stub, getOwnership, message, args, payload)
+	failedTestMessage := " | " + getOwnership + " with args: {" + string(args[0]) + ", "+ string(args[1]) + ", " + string(args[2]) + "}, failed. "
+
+	handleExpectedSuccess(t, stub, getOwnership, failedTestMessage, args, payload)
 
 }
 
 func invokePropertyTransaction(t *testing.T, stub *shim.MockStub, propertyId string, payload string ){
 
-	args := [][]byte{[]byte(propertyTransaction), []byte(propertyTransaction), []byte(propertyId), []byte(payload)}
-	message:= " | " + propertyTransaction + " with args: {" + string(args[1]) + ", " + string(args[2]) + ", " + string(args[3]) + "}, failed. "
+	args := [][]byte{
+		[]byte(propertyTransaction),
+		[]byte(propertyTransaction),
+		[]byte(propertyId),
+		[]byte(payload)}
+
+	failedTestMessage := " | " + propertyTransaction + " with args: {" + string(args[1]) + ", " + string(args[2]) + ", " + string(args[3]) + "}, failed. "
 
 	response := stub.MockInvoke(propertyTransaction, args)
 	if response.Status != shim.OK {
-		message := message +  "[response.Status=" + strconv.FormatInt(int64(response.Status), 10) + "]"
+		message := failedTestMessage +  "[response.Status=" + strconv.FormatInt(int64(response.Status), 10) + "]"
 		fmt.Println(message)
 		t.FailNow()
 	}
