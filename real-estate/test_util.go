@@ -10,8 +10,10 @@ import (
 const getOwnership = "getOwnership"
 const propertyTransaction = "propertyTransaction"
 const getProperty = "getProperty"
-const getPropertyHistory = "getPropertyHistory"
 const ownership_1 = "ownership_1"
+const ownership_2 = "ownership_2"
+const ownership_3 = "ownership_3"
+const ownership_4 = "ownership_4"
 const property_1 = "property_1"
 const dateString = `"2017-06-28T21:57:16"`
 const emptyPropertyJson = `{"saleDate":"","salePrice":0,"owners":[]}`
@@ -40,62 +42,26 @@ func createProperty(propertyId string, saleDate string, salePrice float64, owner
 
 }
 
-func getValidOwnersList() []Attribute {
+func getValidOwnersList(owner1 string, owner1Percentage float64, owner2 string, owner2Percentage float64, date string) []Attribute {
 
-	owner1 := Attribute{}
-	owner2 := Attribute{}
-	owner1.Id = "ownership_3"
-	owner1.Percent = 0.45
-	owner1.SaleDate = dateString
+	ownerAttribute1 := Attribute{}
+	ownerAttribute2 := Attribute{}
+	ownerAttribute1.Id = owner1
+	ownerAttribute1.Percent = owner1Percentage
+	ownerAttribute1.SaleDate = dateString
 
-	owner2.Id = "ownership_2"
-	owner2.Percent = 0.55
-	owner2.SaleDate = dateString
+	ownerAttribute2.Id = owner2
+	ownerAttribute2.Percent = owner2Percentage
+	ownerAttribute2.SaleDate = dateString
 
-	ownershipInputList := []Attribute{owner1, owner2}
-
-	return ownershipInputList
-
-}
-
-func getValidOwnersList2() []Attribute {
-
-	owner1 := Attribute{}
-	owner2 := Attribute{}
-	owner1.Id = "ownership_4"
-	owner1.Percent = 0.35
-	owner1.SaleDate = dateString
-
-	owner2.Id = "ownership_1"
-	owner2.Percent = 0.65
-	owner2.SaleDate = dateString
-
-	ownershipInputList := []Attribute{owner1, owner2}
-
-	return ownershipInputList
-
-}
-
-func getValidOwnersListOverlap() []Attribute {
-
-	owner1 := Attribute{}
-	owner2 := Attribute{}
-	owner1.Id = "ownership_3"
-	owner1.Percent = 0.35
-	owner1.SaleDate = dateString
-
-	owner2.Id = "ownership_1"
-	owner2.Percent = 0.65
-	owner2.SaleDate = dateString
-
-	ownershipInputList := []Attribute{owner1, owner2}
+	ownershipInputList := []Attribute{ownerAttribute1, ownerAttribute2}
 
 	return ownershipInputList
 
 }
 
 //TODO this should include a name as well (chaincode needs to be tightened up)
-func getValidPropertyOwnersList(propertyId string) []Attribute{
+func getValidPropertyListForOwner(propertyId string) []Attribute{
 
 	property1 := Attribute{}
 	property2 := Attribute{}
