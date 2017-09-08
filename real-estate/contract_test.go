@@ -34,9 +34,7 @@ func TestGetOwnershipMissingOwnership(t *testing.T){
 		[]byte(getOwnership),
 		[]byte(payload)}
 
-	failedTestMessage := " | " + getOwnership + " with args: {" + string(args[1]) + "}, did not fail. "
-
-	handleExpectedFailures(t, stub, getOwnership, failedTestMessage, args, payload, nilValueForOwnershipId)
+	handleExpectedFailures(t, stub, getOwnership, args, payload, nilValueForOwnershipId)
 
 }
 
@@ -51,9 +49,7 @@ func TestGetOwnershipExtraArgs(t *testing.T){
 		[]byte(ownership_1),
 		[]byte(payload)}
 
-	failedTestMessage := " | " + getOwnership + " with args: {" + string(args[0]) + ", " + string(args[1]) + ", " + string(args[2]) + "}, did not fail. "
-
-	handleExpectedFailures(t, stub, getOwnership, failedTestMessage, args, invalidArgument, incorrectNumberOfArgs)
+	handleExpectedFailures(t, stub, getOwnership, args, invalidArgument, incorrectNumberOfArgs)
 
 }
 
@@ -109,9 +105,7 @@ func TestPropertyTransactionExtraArgs(t *testing.T) {
 		[]byte(propertyAsString),
 		[]byte("extraArg")}
 
-	failedTestMessage := " | " + propertyTransaction + " with args: {" + string(args[1]) + ", " + string(args[2]) + ", " + string(args[3]) + ", " + string(args[4]) + "}, did not fail. "
-
-	handleExpectedFailures(t, stub, propertyTransaction, failedTestMessage, args, propertyAsString, incorrectNumberOfArgs)
+	handleExpectedFailures(t, stub, propertyTransaction, args, propertyAsString, incorrectNumberOfArgs)
 
 }
 
@@ -119,17 +113,15 @@ func TestPropertyTransactionStringAsSalePrice(t *testing.T) {
 
 	stub := getStub()
 
-	validJson := `{"saleDate":"2017-06-28T21:57:16","salePrice":"1000","owners":[{"id":"ownership_3","percentage":0.45},{"id":"ownerhip_2","percentage":0.55}]}`
+	stringAsSalePrice := `{"saleDate":"2017-06-28T21:57:16","salePrice":"1000","owners":[{"id":"ownership_3","percentage":0.45},{"id":"ownerhip_2","percentage":0.55}]}`
 
 	args := [][]byte{
 		[]byte(propertyTransaction),
 		[]byte(propertyTransaction),
 		[]byte(property_1),
-		[]byte(validJson)}
+		[]byte(stringAsSalePrice)}
 
-	failedTestMessage := " | " + propertyTransaction + " with args: {" + string(args[1]) + "," + string(args[2]) + "}, did not fail. "
-
-	handleExpectedFailures(t, stub, propertyTransaction, failedTestMessage, args, validJson, cannotUnmarshalStringIntoFloat64)
+	handleExpectedFailures(t, stub, propertyTransaction, args, stringAsSalePrice, cannotUnmarshalStringIntoFloat64)
 
 }
 
@@ -145,9 +137,7 @@ func TestPropertyTransactionMissingSaleDate(t *testing.T) {
 		[]byte(property_1),
 		[]byte(missingSaleDateJson)}
 
-	failedTestMessage := " | " + propertyTransaction + " with args: {" + string(args[1]) + "," + string(args[2]) + "}, did not fail. "
-
-	handleExpectedFailures(t, stub, propertyTransaction, failedTestMessage, args, missingSaleDateJson, saleDateRequired)
+	handleExpectedFailures(t, stub, propertyTransaction, args, missingSaleDateJson, saleDateRequired)
 
 }
 
@@ -163,9 +153,7 @@ func TestPropertyTransactionNegativeSalePrice(t *testing.T) {
 		[]byte(property_1),
 		[]byte(negativeSalePriceJson)}
 
-	failedTestMessage := " | " + propertyTransaction + " with args: {" + string(args[1]) + "," + string(args[2]) + "}, did not fail. "
-
-	handleExpectedFailures(t, stub, propertyTransaction, failedTestMessage, args, negativeSalePriceJson, salePriceMustBeGreaterThan0)
+	handleExpectedFailures(t, stub, propertyTransaction, args, negativeSalePriceJson, salePriceMustBeGreaterThan0)
 
 }
 
@@ -181,9 +169,7 @@ func TestPropertyTransactionNoOwners(t *testing.T) {
 		[]byte(property_1),
 		[]byte(noOwnersJson)}
 
-	failedTestMessage := " | " + propertyTransaction + " with args: {" + string(args[1]) + "," + string(args[2]) + "}, did not fail. "
-
-	handleExpectedFailures(t, stub, propertyTransaction, failedTestMessage, args, noOwnersJson, atLeastOneOwnerIsRequired)
+	handleExpectedFailures(t, stub, propertyTransaction, args, noOwnersJson, atLeastOneOwnerIsRequired)
 
 }
 
@@ -199,9 +185,7 @@ func TestPropertyTransactionTooLowTotalOwnerPercentage(t *testing.T) {
 		[]byte(property_1),
 		[]byte(tooLowOwnerPercentage)}
 
-	failedTestMessage := " | " + propertyTransaction + " with args: {" + string(args[1]) + "," + string(args[2]) + "}, did not fail. "
-
-	handleExpectedFailures(t, stub, propertyTransaction, failedTestMessage, args, tooLowOwnerPercentage, totalPercentageCanNotBeGreaterThan1)
+	handleExpectedFailures(t, stub, propertyTransaction, args, tooLowOwnerPercentage, totalPercentageCanNotBeGreaterThan1)
 
 }
 
@@ -217,9 +201,7 @@ func TestPropertyTransactionTooHighTotalOwnerPercentage(t *testing.T) {
 		[]byte(property_1),
 		[]byte(tooHighOwnerPercentage)}
 
-	failedTestMessage := " | " + propertyTransaction + " with args: {" + string(args[1]) + "," + string(args[2]) + "}, did not fail. "
-
-	handleExpectedFailures(t, stub, propertyTransaction, failedTestMessage, args, tooHighOwnerPercentage, totalPercentageCanNotBeGreaterThan1)
+	handleExpectedFailures(t, stub, propertyTransaction, args, tooHighOwnerPercentage, totalPercentageCanNotBeGreaterThan1)
 
 }
 
@@ -248,9 +230,7 @@ func TestGetPropertyExtraArgs(t *testing.T){
 		[]byte(property.PropertyId),
 		[]byte(propertyString)}
 
-	failedTestMessage := " | " + getProperty + " with args: {" + string(args[1]) + "," + string(args[2]) + "," + string(args[3]) + "}, did not fail. "
-
-	handleExpectedFailures(t, stub, getProperty, failedTestMessage, args, propertyString, incorrectNumberOfArgs)
+	handleExpectedFailures(t, stub, getProperty, args, propertyString, incorrectNumberOfArgs)
 
 }
 
@@ -263,53 +243,7 @@ func TestGetPropertyMissingProperty(t *testing.T){
 		[]byte(getProperty),
 		[]byte(property_1)}
 
-	failedTestMessage := " | " + getProperty + " with args: {" + property_1 + "}, did not fail. "
-
-	handleExpectedFailures(t, stub, getProperty, failedTestMessage, args, emptyPropertyJson, nilAmountFor)
-
-}
-
-func handleExpectedSuccess(t *testing.T, stub *shim.MockStub, argument string, outputMessage string, args [][]byte, attemptedPayload string){
-
-	res := stub.MockInvoke(argument, args)
-
-	if res.Status != shim.OK {
-		msg := outputMessage +  "[res.Status=" + strconv.FormatInt(int64(res.Status), 10) + "]"
-		fmt.Println(msg)
-		t.FailNow()
-	}
-	if res.Payload == nil {
-		msg := outputMessage + "[res.Message=" + string(res.Message) + "]"
-		fmt.Println(msg)
-		t.FailNow()
-	}
-	if string(res.Payload) != attemptedPayload {
-		msg := outputMessage + "[res.Payload=" + string(res.Payload) + "]"
-		fmt.Println(msg)
-		t.FailNow()
-	}
-
-}
-
-func handleExpectedFailures(t *testing.T, stub *shim.MockStub, argument string, failedTestMessage string, args [][]byte, payload string, expectedResponseMessage string){
-
-	response := stub.MockInvoke(argument, args)
-
-	if response.Status != 500 {
-		msg := failedTestMessage +  "[response.Status=" + strconv.FormatInt(int64(response.Status), 10) + "]"
-		fmt.Println(msg)
-		t.FailNow()
-	}
-	if !strings.Contains(response.Message, expectedResponseMessage) {
-		msg := failedTestMessage + "[response.Message=" + string(response.Message) + "]"
-		fmt.Println(msg)
-		t.FailNow()
-	}
-	if string(response.Payload) == payload {
-		msg := failedTestMessage + "[response.Payload=" + string(response.Payload) + "]"
-		fmt.Println(msg)
-		t.FailNow()
-	}
+	handleExpectedFailures(t, stub, getProperty, args, emptyPropertyJson, nilAmountFor)
 
 }
 
@@ -373,3 +307,53 @@ func invokePropertyTransaction(t *testing.T, stub *shim.MockStub, propertyId str
 	}
 
 }
+
+func handleExpectedSuccess(t *testing.T, stub *shim.MockStub, argument string, outputMessage string, args [][]byte, payload string){
+
+	response := stub.MockInvoke(argument, args)
+
+	msg := "| FAIL [{args}, {response failure}] | [{" + argument + ", " + payload + "}], "
+
+	if response.Status != shim.OK {
+		msg += "{response.Status=" + strconv.FormatInt(int64(response.Status), 10) + "}]"
+		fmt.Println(msg)
+		t.FailNow()
+	}
+	if response.Payload == nil {
+		msg += "{response.Message=" + string(response.Message) + "}]"
+		fmt.Println(msg)
+		t.FailNow()
+	}
+	if string(response.Payload) != payload {
+		msg += "{response.Payload=" + string(response.Payload) + "}]"
+		fmt.Println(msg)
+		t.FailNow()
+	}
+
+}
+
+func handleExpectedFailures(t *testing.T, stub *shim.MockStub, argument string, args [][]byte, payload string, expectedResponseMessage string){
+
+	response := stub.MockInvoke(argument, args)
+
+	msg := "| FAIL [{args}, {response failure}] | [{" + argument + ", " + payload + "}], "
+
+	if response.Status != 500 {
+		msg += "{response.Status=" + strconv.FormatInt(int64(response.Status), 10) + "}]"
+		fmt.Println(msg)
+		t.FailNow()
+	}
+	if !strings.Contains(response.Message, expectedResponseMessage) {
+		msg += "{response.Message=" + string(response.Message) + "}]"
+		fmt.Println(msg)
+		t.FailNow()
+	}
+	if string(response.Payload) == payload {
+		msg += "{response.Payload=" + string(response.Payload) + "}]"
+		fmt.Println(msg)
+		t.FailNow()
+	}
+
+}
+
+
