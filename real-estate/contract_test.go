@@ -59,7 +59,7 @@ func TestOwnershipCreatedDuringPropertyTransaction(t *testing.T){
 
 	var property = Property{}
 
-	owners := getValidOwnersList(ownership_1, 0.45, ownership_2, 0.55, dateString)
+	owners := getListOfOwnersForProperty(ownership_1, 0.45, ownership_2, 0.55, dateString)
 
 	property, propertyAsString := createProperty(property_1, dateString, 1000, owners)
 
@@ -72,7 +72,7 @@ func TestOwnershipCreatedDuringPropertyTransaction(t *testing.T){
 	invokePropertyTransaction(t, stub, property.PropertyId, propertyAsString)
 
 	propertyId := "1"
-	propertyOwnersList := getValidPropertyListForOwner(propertyId)
+	propertyOwnersList := getPropertyListForOwner(propertyId)
 
 	ownershipPropertyAsString := getAttributesAsString([]Attribute{propertyOwnersList[0]})
 
@@ -80,12 +80,11 @@ func TestOwnershipCreatedDuringPropertyTransaction(t *testing.T){
 
 }
 
-//TODO next
 func TestPropertyTransaction(t *testing.T){
 
 	stub := getStub()
 
-	ownerList := getValidOwnersList(ownership_1, 0.45, ownership_2, 0.55, dateString)
+	ownerList := getListOfOwnersForProperty(ownership_1, 0.45, ownership_2, 0.55, dateString)
 	property, propertyString := createProperty(property_1, dateString, 1000, ownerList)
 
 	invokePropertyTransaction(t,stub, property.PropertyId, propertyString)
@@ -97,13 +96,13 @@ func TestMultiplePropertyTransactions(t *testing.T){
 
 	stub := getStub()
 
-	ownerList := getValidOwnersList(ownership_1, 0.45, ownership_2, 0.55, dateString)
+	ownerList := getListOfOwnersForProperty(ownership_1, 0.45, ownership_2, 0.55, dateString)
 	property, propertyString := createProperty(property_1, dateString, 1000, ownerList)
 
 	invokePropertyTransaction(t,stub, property.PropertyId, propertyString)
 	checkPropertyState(t, stub, property, propertyString)
 
-	ownerList = getValidOwnersList(ownership_3, 0.35, ownership_4, 0.65, dateString)
+	ownerList = getListOfOwnersForProperty(ownership_3, 0.35, ownership_4, 0.65, dateString)
 	property, propertyString = createProperty(property_1, dateString, 1000, ownerList)
 
 	invokePropertyTransaction(t,stub, property.PropertyId, propertyString)
@@ -115,13 +114,13 @@ func TestMultiplePropertyTransactionsWithRepeatOwners(t *testing.T){
 
 	stub := getStub()
 
-	ownerList := getValidOwnersList(ownership_1, 0.45, ownership_2, 0.55, dateString)
+	ownerList := getListOfOwnersForProperty(ownership_1, 0.45, ownership_2, 0.55, dateString)
 	property, propertyString := createProperty(property_1, dateString, 1000, ownerList)
 
 	invokePropertyTransaction(t,stub, property.PropertyId, propertyString)
 	checkPropertyState(t, stub, property, propertyString)
 
-	ownerList = getValidOwnersList(ownership_1, 0.35, ownership_3, 0.65, dateString)
+	ownerList = getListOfOwnersForProperty(ownership_1, 0.35, ownership_3, 0.65, dateString)
 	property, propertyString = createProperty(property_1, dateString, 1000, ownerList)
 
 	invokePropertyTransaction(t,stub, property.PropertyId, propertyString)
@@ -133,7 +132,7 @@ func TestPropertyTransactionExtraArgs(t *testing.T) {
 
 	stub := getStub()
 
-	ownerList := getValidOwnersList(ownership_1, 0.35, ownership_3, 0.65, dateString)
+	ownerList := getListOfOwnersForProperty(ownership_1, 0.35, ownership_3, 0.65, dateString)
 	_, propertyAsString := createProperty(property_1, dateString, 1000, ownerList)
 
 	args := [][]byte{
@@ -247,7 +246,7 @@ func TestGetProperty(t *testing.T){
 
 	stub := getStub()
 
-	ownerList := getValidOwnersList(ownership_1, 0.35, ownership_3, 0.65, dateString)
+	ownerList := getListOfOwnersForProperty(ownership_1, 0.35, ownership_3, 0.65, dateString)
 	property, propertyString := createProperty(property_1, dateString, 1000, ownerList)
 
 	invokePropertyTransaction(t, stub, property.PropertyId, propertyString)
@@ -259,7 +258,7 @@ func TestGetPropertyExtraArgs(t *testing.T){
 
 	stub := getStub()
 
-	ownerList := getValidOwnersList(ownership_1, 0.35, ownership_3, 0.65, dateString)
+	ownerList := getListOfOwnersForProperty(ownership_1, 0.35, ownership_3, 0.65, dateString)
 	property, propertyString := createProperty(property_1, dateString, 1000, ownerList)
 
 	invokePropertyTransaction(t, stub, property.PropertyId, propertyString)

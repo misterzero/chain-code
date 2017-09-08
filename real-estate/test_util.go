@@ -42,7 +42,7 @@ func createProperty(propertyId string, saleDate string, salePrice float64, owner
 
 }
 
-func getValidOwnersList(owner1 string, owner1Percentage float64, owner2 string, owner2Percentage float64, date string) []Attribute {
+func getListOfOwnersForProperty(owner1 string, owner1Percentage float64, owner2 string, owner2Percentage float64, date string) []Attribute {
 
 	ownerAttribute1 := Attribute{}
 	ownerAttribute2 := Attribute{}
@@ -60,8 +60,7 @@ func getValidOwnersList(owner1 string, owner1Percentage float64, owner2 string, 
 
 }
 
-//TODO this should include a name as well (chaincode needs to be tightened up)
-func getValidPropertyListForOwner(propertyId string) []Attribute{
+func getPropertyListForOwner(propertyId string) []Attribute{
 
 	property1 := Attribute{}
 	property2 := Attribute{}
