@@ -10,6 +10,7 @@ import (
 const getOwnership = "getOwnership"
 const propertyTransaction = "propertyTransaction"
 const getProperty = "getProperty"
+const getPropertyHistory = "getPropertyHistory"
 const ownership_1 = "ownership_1"
 const property_1 = "property_1"
 const dateString = `"2017-06-28T21:57:16"`
@@ -49,6 +50,42 @@ func getValidOwnersList() []Attribute {
 
 	owner2.Id = "ownership_2"
 	owner2.Percent = 0.55
+	owner2.SaleDate = dateString
+
+	ownershipInputList := []Attribute{owner1, owner2}
+
+	return ownershipInputList
+
+}
+
+func getValidOwnersList2() []Attribute {
+
+	owner1 := Attribute{}
+	owner2 := Attribute{}
+	owner1.Id = "ownership_4"
+	owner1.Percent = 0.35
+	owner1.SaleDate = dateString
+
+	owner2.Id = "ownership_1"
+	owner2.Percent = 0.65
+	owner2.SaleDate = dateString
+
+	ownershipInputList := []Attribute{owner1, owner2}
+
+	return ownershipInputList
+
+}
+
+func getValidOwnersListOverlap() []Attribute {
+
+	owner1 := Attribute{}
+	owner2 := Attribute{}
+	owner1.Id = "ownership_3"
+	owner1.Percent = 0.35
+	owner1.SaleDate = dateString
+
+	owner2.Id = "ownership_1"
+	owner2.Percent = 0.65
 	owner2.SaleDate = dateString
 
 	ownershipInputList := []Attribute{owner1, owner2}

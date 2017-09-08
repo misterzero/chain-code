@@ -92,6 +92,36 @@ func TestPropertyTransaction(t *testing.T){
 
 }
 
+func TestMultiplePropertyTransactions(t *testing.T){
+
+	stub := getStub()
+
+	property, propertyString := createProperty(property_1, dateString, 1000, getValidOwnersList())
+
+	invokePropertyTransaction(t,stub, property.PropertyId, propertyString)
+	checkPropertyState(t, stub, property, propertyString)
+
+	property, propertyString = createProperty(property_1, dateString, 1000, getValidOwnersList2())
+	invokePropertyTransaction(t,stub, property.PropertyId, propertyString)
+	checkPropertyState(t, stub, property, propertyString)
+
+}
+
+func TestMultiplePropertyTransactionsWithRepeatOwners(t *testing.T){
+
+	stub := getStub()
+
+	property, propertyString := createProperty(property_1, dateString, 1000, getValidOwnersList())
+
+	invokePropertyTransaction(t,stub, property.PropertyId, propertyString)
+	checkPropertyState(t, stub, property, propertyString)
+
+	property, propertyString = createProperty(property_1, dateString, 1000, getValidOwnersListOverlap())
+	invokePropertyTransaction(t,stub, property.PropertyId, propertyString)
+	checkPropertyState(t, stub, property, propertyString)
+
+}
+
 func TestPropertyTransactionExtraArgs(t *testing.T) {
 
 	stub := getStub()
@@ -254,9 +284,7 @@ func checkGetProperty(t *testing.T, stub *shim.MockStub, property Property, prop
 		[]byte(getProperty),
 		[]byte(property.PropertyId)}
 
-	failedTestMessage := " | " + getProperty + " with args: {" + string(args[1]) + "}, failed. "
-
-	handleExpectedSuccess(t, stub, getProperty, failedTestMessage, args, propertyString)
+	handleExpectedSuccess(t, stub, getProperty, args, propertyString)
 
 }
 
@@ -283,9 +311,7 @@ func invokeGetOwnership(t *testing.T, stub *shim.MockStub,ownershipId string, pa
 		[]byte(getOwnership),
 		[]byte(ownershipId)}
 
-	failedTestMessage := " | " + getOwnership + " with args: {" + string(args[0]) + ", "+ string(args[1]) + ", " + string(args[2]) + "}, failed. "
-
-	handleExpectedSuccess(t, stub, getOwnership, failedTestMessage, args, payload)
+	handleExpectedSuccess(t, stub, getOwnership, args, payload)
 
 }
 
@@ -308,11 +334,11 @@ func invokePropertyTransaction(t *testing.T, stub *shim.MockStub, propertyId str
 
 }
 
-func handleExpectedSuccess(t *testing.T, stub *shim.MockStub, argument string, outputMessage string, args [][]byte, payload string){
+func handleExpectedSuccess(t *testing.T, stub *shim.MockStub, argument string, args [][]byte, payload string){
 
 	response := stub.MockInvoke(argument, args)
 
-	msg := "| FAIL [{args}, {response failure}] | [{" + argument + ", " + payload + "}], "
+	msg := "| FAIL [{args}, {<response-failure>}] | [{" + argument + ", " + payload + "}, "
 
 	if response.Status != shim.OK {
 		msg += "{response.Status=" + strconv.FormatInt(int64(response.Status), 10) + "}]"
@@ -336,7 +362,7 @@ func handleExpectedFailures(t *testing.T, stub *shim.MockStub, argument string, 
 
 	response := stub.MockInvoke(argument, args)
 
-	msg := "| FAIL [{args}, {response failure}] | [{" + argument + ", " + payload + "}], "
+	msg := "| FAIL [{args}, {<response-failure>}] | [{" + argument + ", " + payload + "}, "
 
 	if response.Status != 500 {
 		msg += "{response.Status=" + strconv.FormatInt(int64(response.Status), 10) + "}]"
