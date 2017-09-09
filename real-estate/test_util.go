@@ -116,6 +116,16 @@ func getAttributeAsString(attribute Attribute) (string, error){
 
 }
 
+func getChainCodeArgs(chainCodeMethodName string, payload ...string) ([][]byte){
+
+	args := [][]byte{[]byte(chainCodeMethodName), []byte(chainCodeMethodName)}
+	for i := 0; i < len(payload); i++ {
+		args = append(args, []byte(payload[i]))
+	}
+	return args
+
+}
+
 func getStub() (*shim.MockStub){
 
 	scc := new(Chaincode)

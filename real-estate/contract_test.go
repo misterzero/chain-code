@@ -29,12 +29,9 @@ func TestGetOwnershipMissingOwnership(t *testing.T){
 	stub := getStub()
 
 	payload := ownership_1
-	args := [][]byte{
-		[]byte(getOwnership),
-		[]byte(getOwnership),
-		[]byte(payload)}
+	args := getChainCodeArgs(getOwnership, ownership_1)
 
-	handleExpectedFailures(t, stub, getOwnership, args, payload, nilValueForOwnershipId)
+	handleExpectedFailures(t, stub, args, payload, getOwnership, nilValueForOwnershipId)
 
 }
 
@@ -43,13 +40,9 @@ func TestGetOwnershipExtraArgs(t *testing.T){
 	stub := getStub()
 
 	payload := invalidArgument
-	args := [][]byte{
-		[]byte(getOwnership),
-		[]byte(getOwnership),
-		[]byte(ownership_1),
-		[]byte(payload)}
+	args := getChainCodeArgs(getOwnership, ownership_1, payload)
 
-	handleExpectedFailures(t, stub, getOwnership, args, invalidArgument, incorrectNumberOfArgs)
+	handleExpectedFailures(t, stub, args, invalidArgument, getOwnership, incorrectNumberOfArgs)
 
 }
 
@@ -135,14 +128,9 @@ func TestPropertyTransactionExtraArgs(t *testing.T) {
 	ownerList := getListOfOwnersForProperty(ownership_1, 0.35, ownership_3, 0.65, dateString)
 	_, propertyAsString := createProperty(property_1, dateString, 1000, ownerList)
 
-	args := [][]byte{
-		[]byte(propertyTransaction),
-		[]byte(propertyTransaction),
-		[]byte(property_1),
-		[]byte(propertyAsString),
-		[]byte("extraArg")}
+	args := getChainCodeArgs(getOwnership, property_1, propertyAsString, "extraArg")
 
-	handleExpectedFailures(t, stub, propertyTransaction, args, propertyAsString, incorrectNumberOfArgs)
+	handleExpectedFailures(t, stub, args, propertyAsString, propertyTransaction, incorrectNumberOfArgs)
 
 }
 
@@ -151,14 +139,9 @@ func TestPropertyTransactionStringAsSalePrice(t *testing.T) {
 	stub := getStub()
 
 	stringAsSalePrice := `{"saleDate":"2017-06-28T21:57:16","salePrice":"1000","owners":[{"id":"ownership_3","percentage":0.45},{"id":"ownerhip_2","percentage":0.55}]}`
+	args := getChainCodeArgs(propertyTransaction, property_1, stringAsSalePrice)
 
-	args := [][]byte{
-		[]byte(propertyTransaction),
-		[]byte(propertyTransaction),
-		[]byte(property_1),
-		[]byte(stringAsSalePrice)}
-
-	handleExpectedFailures(t, stub, propertyTransaction, args, stringAsSalePrice, cannotUnmarshalStringIntoFloat64)
+	handleExpectedFailures(t, stub, args, stringAsSalePrice, propertyTransaction, cannotUnmarshalStringIntoFloat64)
 
 }
 
@@ -166,15 +149,10 @@ func TestPropertyTransactionMissingSaleDate(t *testing.T) {
 
 	stub := getStub()
 
-	missingSaleDateJson := `{"salePrice":1000,"owners":[{"id":"ownership_3","percentage":0.45},{"id":"ownership_2","percentage":0.55}]}`
+	missingSaleDate := `{"salePrice":1000,"owners":[{"id":"ownership_3","percentage":0.45},{"id":"ownership_2","percentage":0.55}]}`
+	args := getChainCodeArgs(propertyTransaction, property_1, missingSaleDate)
 
-	args := [][]byte{
-		[]byte(propertyTransaction),
-		[]byte(propertyTransaction),
-		[]byte(property_1),
-		[]byte(missingSaleDateJson)}
-
-	handleExpectedFailures(t, stub, propertyTransaction, args, missingSaleDateJson, saleDateRequired)
+	handleExpectedFailures(t, stub, args, missingSaleDate, propertyTransaction, saleDateRequired)
 
 }
 
@@ -182,15 +160,10 @@ func TestPropertyTransactionNegativeSalePrice(t *testing.T) {
 
 	stub := getStub()
 
-	negativeSalePriceJson := `{"saleDate":"2017-06-28T21:57:16","salePrice":-1,"owners":[{"id":"ownership_3","percentage":0.45},{"id":"ownerhip_2","percentage":0.55}]}`
+	negativeSalePrice := `{"saleDate":"2017-06-28T21:57:16","salePrice":-1,"owners":[{"id":"ownership_3","percentage":0.45},{"id":"ownerhip_2","percentage":0.55}]}`
+	args := getChainCodeArgs(propertyTransaction, property_1, negativeSalePrice)
 
-	args := [][]byte{
-		[]byte(propertyTransaction),
-		[]byte(propertyTransaction),
-		[]byte(property_1),
-		[]byte(negativeSalePriceJson)}
-
-	handleExpectedFailures(t, stub, propertyTransaction, args, negativeSalePriceJson, salePriceMustBeGreaterThan0)
+	handleExpectedFailures(t, stub, args, negativeSalePrice, propertyTransaction, salePriceMustBeGreaterThan0)
 
 }
 
@@ -198,15 +171,10 @@ func TestPropertyTransactionNoOwners(t *testing.T) {
 
 	stub := getStub()
 
-	noOwnersJson := `{"saleDate":"2017-06-28T21:57:16","salePrice":1000,"owners":[]}`
+	noOwners := `{"saleDate":"2017-06-28T21:57:16","salePrice":1000,"owners":[]}`
+	args := getChainCodeArgs(propertyTransaction, property_1, noOwners)
 
-	args := [][]byte{
-		[]byte(propertyTransaction),
-		[]byte(propertyTransaction),
-		[]byte(property_1),
-		[]byte(noOwnersJson)}
-
-	handleExpectedFailures(t, stub, propertyTransaction, args, noOwnersJson, atLeastOneOwnerIsRequired)
+	handleExpectedFailures(t, stub, args, noOwners, propertyTransaction, atLeastOneOwnerIsRequired)
 
 }
 
@@ -215,14 +183,9 @@ func TestPropertyTransactionTooLowTotalOwnerPercentage(t *testing.T) {
 	stub := getStub()
 
 	tooLowOwnerPercentage := `{"saleDate":"2017-06-28T21:57:16","salePrice":1000,"owners":[{"id":"ownership_3","percentage":0.45},{"id":"ownerhip_2","percentage":0.50}]}`
+	args := getChainCodeArgs(propertyTransaction, property_1, tooLowOwnerPercentage)
 
-	args := [][]byte{
-		[]byte(propertyTransaction),
-		[]byte(propertyTransaction),
-		[]byte(property_1),
-		[]byte(tooLowOwnerPercentage)}
-
-	handleExpectedFailures(t, stub, propertyTransaction, args, tooLowOwnerPercentage, totalPercentageCanNotBeGreaterThan1)
+	handleExpectedFailures(t, stub, args, tooLowOwnerPercentage, propertyTransaction, totalPercentageCanNotBeGreaterThan1)
 
 }
 
@@ -231,14 +194,9 @@ func TestPropertyTransactionTooHighTotalOwnerPercentage(t *testing.T) {
 	stub := getStub()
 
 	tooHighOwnerPercentage := `{"saleDate":"2017-06-28T21:57:16","salePrice":1000,"owners":[{"id":"ownership_3","percentage":0.45},{"id":"ownerhip_2","percentage":0.70}]}`
+	args := getChainCodeArgs(propertyTransaction, property_1, tooHighOwnerPercentage)
 
-	args := [][]byte{
-		[]byte(propertyTransaction),
-		[]byte(propertyTransaction),
-		[]byte(property_1),
-		[]byte(tooHighOwnerPercentage)}
-
-	handleExpectedFailures(t, stub, propertyTransaction, args, tooHighOwnerPercentage, totalPercentageCanNotBeGreaterThan1)
+	handleExpectedFailures(t, stub, args, tooHighOwnerPercentage, propertyTransaction, totalPercentageCanNotBeGreaterThan1)
 
 }
 
@@ -263,13 +221,9 @@ func TestGetPropertyExtraArgs(t *testing.T){
 
 	invokePropertyTransaction(t, stub, property.PropertyId, propertyString)
 
-	args := [][]byte{
-		[]byte(getProperty),
-		[]byte(getProperty),
-		[]byte(property.PropertyId),
-		[]byte(propertyString)}
+	args := getChainCodeArgs(getProperty, property.PropertyId, propertyString)
 
-	handleExpectedFailures(t, stub, getProperty, args, propertyString, incorrectNumberOfArgs)
+	handleExpectedFailures(t, stub, args, propertyString, getProperty, incorrectNumberOfArgs)
 
 }
 
@@ -277,21 +231,15 @@ func TestGetPropertyMissingProperty(t *testing.T){
 
 	stub := getStub()
 
-	args := [][]byte{
-		[]byte(getProperty),
-		[]byte(getProperty),
-		[]byte(property_1)}
+	args := getChainCodeArgs(getProperty, property_1)
 
-	handleExpectedFailures(t, stub, getProperty, args, emptyPropertyJson, nilAmountFor)
+	handleExpectedFailures(t, stub, args, emptyPropertyJson, getProperty, nilAmountFor)
 
 }
 
 func checkGetProperty(t *testing.T, stub *shim.MockStub, property Property, propertyString string){
 
-	args := [][]byte{
-		[]byte(getProperty),
-		[]byte(getProperty),
-		[]byte(property.PropertyId)}
+	args := getChainCodeArgs(getProperty, property.PropertyId)
 
 	handleExpectedSuccess(t, stub, getProperty, args, propertyString)
 
@@ -315,10 +263,7 @@ func checkPropertyState(t *testing.T, stub *shim.MockStub, property Property, pr
 
 func invokeGetOwnership(t *testing.T, stub *shim.MockStub,ownershipId string, payload string){
 
-	args := [][]byte{
-		[]byte(getOwnership),
-		[]byte(getOwnership),
-		[]byte(ownershipId)}
+	args := getChainCodeArgs(getOwnership, ownershipId)
 
 	handleExpectedSuccess(t, stub, getOwnership, args, payload)
 
@@ -326,11 +271,7 @@ func invokeGetOwnership(t *testing.T, stub *shim.MockStub,ownershipId string, pa
 
 func invokePropertyTransaction(t *testing.T, stub *shim.MockStub, propertyId string, payload string ){
 
-	args := [][]byte{
-		[]byte(propertyTransaction),
-		[]byte(propertyTransaction),
-		[]byte(propertyId),
-		[]byte(payload)}
+	args := getChainCodeArgs(propertyTransaction, propertyId, payload)
 
 	failedTestMessage := " | " + propertyTransaction + " with args: {" + string(args[1]) + ", " + string(args[2]) + ", " + string(args[3]) + "}, failed. "
 
@@ -367,7 +308,7 @@ func handleExpectedSuccess(t *testing.T, stub *shim.MockStub, argument string, a
 
 }
 
-func handleExpectedFailures(t *testing.T, stub *shim.MockStub, argument string, args [][]byte, payload string, expectedResponseMessage string){
+func handleExpectedFailures(t *testing.T, stub *shim.MockStub, args [][]byte, payload string, argument string, expectedResponseMessage string){
 
 	response := stub.MockInvoke(argument, args)
 
