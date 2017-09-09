@@ -19,9 +19,7 @@ package main
 import (
 	"testing"
 	"github.com/hyperledger/fabric/core/chaincode/shim"
-	"strconv"
 	"fmt"
-	"strings"
 )
 
 func TestGetOwnershipMissingOwnership(t *testing.T){
@@ -46,6 +44,7 @@ func TestGetOwnershipExtraArgs(t *testing.T){
 
 }
 
+//TODO
 func TestOwnershipCreatedDuringPropertyTransaction(t *testing.T){
 
 	stub := getStub()
@@ -81,7 +80,7 @@ func TestPropertyTransaction(t *testing.T){
 	property, propertyString := createProperty(property_1, dateString, 1000, ownerList)
 
 	invokePropertyTransaction(t,stub, property.PropertyId, propertyString)
-	checkPropertyState(t, stub, property, propertyString)
+	checkGetProperty(t, stub, property, propertyString)
 
 }
 
@@ -93,13 +92,13 @@ func TestMultiplePropertyTransactions(t *testing.T){
 	property, propertyString := createProperty(property_1, dateString, 1000, ownerList)
 
 	invokePropertyTransaction(t,stub, property.PropertyId, propertyString)
-	checkPropertyState(t, stub, property, propertyString)
+	checkGetProperty(t, stub, property, propertyString)
 
 	ownerList = getListOfOwnersForProperty(ownership_3, 0.35, ownership_4, 0.65, dateString)
 	property, propertyString = createProperty(property_1, dateString, 1000, ownerList)
 
 	invokePropertyTransaction(t,stub, property.PropertyId, propertyString)
-	checkPropertyState(t, stub, property, propertyString)
+	checkGetProperty(t, stub, property, propertyString)
 
 }
 
@@ -111,13 +110,13 @@ func TestMultiplePropertyTransactionsWithRepeatOwners(t *testing.T){
 	property, propertyString := createProperty(property_1, dateString, 1000, ownerList)
 
 	invokePropertyTransaction(t,stub, property.PropertyId, propertyString)
-	checkPropertyState(t, stub, property, propertyString)
+	checkGetProperty(t, stub, property, propertyString)
 
 	ownerList = getListOfOwnersForProperty(ownership_1, 0.35, ownership_3, 0.65, dateString)
 	property, propertyString = createProperty(property_1, dateString, 1000, ownerList)
 
 	invokePropertyTransaction(t,stub, property.PropertyId, propertyString)
-	checkPropertyState(t, stub, property, propertyString)
+	checkGetProperty(t, stub, property, propertyString)
 
 }
 
@@ -236,100 +235,3 @@ func TestGetPropertyMissingProperty(t *testing.T){
 	handleExpectedFailures(t, stub, args, emptyPropertyJson, getProperty, nilAmountFor)
 
 }
-
-func checkGetProperty(t *testing.T, stub *shim.MockStub, property Property, propertyString string){
-
-	args := getChainCodeArgs(getProperty, property.PropertyId)
-
-	handleExpectedSuccess(t, stub, getProperty, args, propertyString)
-
-}
-
-func checkPropertyState(t *testing.T, stub *shim.MockStub, property Property, propertyString string) []byte{
-
-	bytes := stub.State[property.PropertyId]
-	if bytes == nil {
-		fmt.Println("Property", string(bytes), "failed to get value")
-		t.FailNow()
-	}
-	if string(bytes) != propertyString {
-		fmt.Println("Property value", property.PropertyId, "was not", propertyString, "as expected")
-		t.FailNow()
-	}
-
-	return bytes
-
-}
-
-func invokeGetOwnership(t *testing.T, stub *shim.MockStub,ownershipId string, payload string){
-
-	args := getChainCodeArgs(getOwnership, ownershipId)
-
-	handleExpectedSuccess(t, stub, getOwnership, args, payload)
-
-}
-
-func invokePropertyTransaction(t *testing.T, stub *shim.MockStub, propertyId string, payload string ){
-
-	args := getChainCodeArgs(propertyTransaction, propertyId, payload)
-
-	failedTestMessage := " | " + propertyTransaction + " with args: {" + string(args[1]) + ", " + string(args[2]) + ", " + string(args[3]) + "}, failed. "
-
-	response := stub.MockInvoke(propertyTransaction, args)
-	if response.Status != shim.OK {
-		message := failedTestMessage +  "[response.Status=" + strconv.FormatInt(int64(response.Status), 10) + "]"
-		fmt.Println(message)
-		t.FailNow()
-	}
-
-}
-
-func handleExpectedSuccess(t *testing.T, stub *shim.MockStub, argument string, args [][]byte, payload string){
-
-	response := stub.MockInvoke(argument, args)
-
-	msg := "| FAIL [{args}, {<response-failure>}] | [{" + argument + ", " + payload + "}, "
-
-	if response.Status != shim.OK {
-		msg += "{response.Status=" + strconv.FormatInt(int64(response.Status), 10) + "}]"
-		fmt.Println(msg)
-		t.FailNow()
-	}
-	if response.Payload == nil {
-		msg += "{response.Message=" + string(response.Message) + "}]"
-		fmt.Println(msg)
-		t.FailNow()
-	}
-	if string(response.Payload) != payload {
-		msg += "{response.Payload=" + string(response.Payload) + "}]"
-		fmt.Println(msg)
-		t.FailNow()
-	}
-
-}
-
-func handleExpectedFailures(t *testing.T, stub *shim.MockStub, args [][]byte, payload string, argument string, expectedResponseMessage string){
-
-	response := stub.MockInvoke(argument, args)
-
-	msg := "| FAIL [{args}, {<response-failure>}] | [{" + argument + ", " + payload + "}, "
-
-	if response.Status != 500 {
-		msg += "{response.Status=" + strconv.FormatInt(int64(response.Status), 10) + "}]"
-		fmt.Println(msg)
-		t.FailNow()
-	}
-	if !strings.Contains(response.Message, expectedResponseMessage) {
-		msg += "{response.Message=" + string(response.Message) + "}]"
-		fmt.Println(msg)
-		t.FailNow()
-	}
-	if string(response.Payload) == payload {
-		msg += "{response.Payload=" + string(response.Payload) + "}]"
-		fmt.Println(msg)
-		t.FailNow()
-	}
-
-}
-
-

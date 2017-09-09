@@ -3,8 +3,13 @@ package main
 import (
 	"bytes"
 	"github.com/hyperledger/fabric/core/chaincode/shim"
+	"github.com/hyperledger/fabric/protos/peer"
 	"encoding/json"
 	"errors"
+	"testing"
+	"strconv"
+	"strings"
+	"fmt"
 )
 
 const getOwnership = "getOwnership"
@@ -27,6 +32,8 @@ const saleDateRequired = "A sale date is required."
 const salePriceMustBeGreaterThan0 = "The sale price must be greater than 0"
 const totalPercentageCanNotBeGreaterThan1 = "Total Percentage can not be greater than or less than 1. Your total percentage ="
 const atLeastOneOwnerIsRequired = "At least one owner is required."
+
+const failureMessageStart = "| FAIL [{args}, {<response-failure>}] | [{"
 
 func createProperty(propertyId string, saleDate string, salePrice float64, owners []Attribute) (Property, string) {
 
@@ -123,6 +130,95 @@ func getChainCodeArgs(chainCodeMethodName string, payload ...string) ([][]byte){
 		args = append(args, []byte(payload[i]))
 	}
 	return args
+
+}
+
+func checkGetProperty(t *testing.T, stub *shim.MockStub, property Property, propertyString string){
+
+	args := getChainCodeArgs(getProperty, property.PropertyId)
+
+	handleExpectedSuccess(t, stub, getProperty, args, propertyString)
+
+}
+
+func invokeGetOwnership(t *testing.T, stub *shim.MockStub,ownershipId string, payload string){
+
+	args := getChainCodeArgs(getOwnership, ownershipId)
+
+	handleExpectedSuccess(t, stub, getOwnership, args, payload)
+
+}
+
+func invokePropertyTransaction(t *testing.T, stub *shim.MockStub, propertyId string, payload string ){
+
+	args := getChainCodeArgs(propertyTransaction, propertyId, payload)
+
+	handleExpectedSuccess(t, stub, propertyTransaction, args, "")
+
+}
+
+func handleExpectedSuccess(t *testing.T, stub *shim.MockStub, argument string, args [][]byte, payload string){
+
+	response := stub.MockInvoke(argument, args)
+
+	failureMessage := failureMessageStart + argument + ", " + payload + "}, "
+
+	verifyExpectedResponseStatus(t, response, failureMessage, shim.OK)
+	verifyExpectedInvalidPayload(t, response, failureMessage, payload)
+
+}
+
+func handleExpectedFailures(t *testing.T, stub *shim.MockStub, args [][]byte, payload string, argument string, expectedResponseMessage string){
+
+	response := stub.MockInvoke(argument, args)
+
+	failureMessage := failureMessageStart + argument + ", " + payload + "}, "
+
+	verifyExpectedResponseStatus(t, response, failureMessage, shim.ERROR)
+	verifyExpectedResponseMessage(t, response, failureMessage, expectedResponseMessage)
+	verifyExpectedValidPayload(t, response, failureMessage, payload)
+
+}
+
+func verifyExpectedResponseStatus(t *testing.T, response peer.Response, failureMessage string, statusValue int32) {
+
+	if response.Status != statusValue {
+		failureMessage += "{response.Status=" + strconv.FormatInt(int64(response.Status), 10) + "}]"
+		displayFailure(t, failureMessage)
+	}
+
+}
+
+func verifyExpectedResponseMessage(t *testing.T, response peer.Response, failureMessage string, expectedResponseMessage string) {
+
+	if !strings.Contains(response.Message, expectedResponseMessage) {
+		failureMessage += "{response.Message=" + string(response.Message) + "}]"
+		displayFailure(t, failureMessage)
+	}
+
+}
+
+func verifyExpectedValidPayload(t *testing.T, response peer.Response, failureMessage string, payload string) {
+
+	if string(response.Payload) == payload {
+		failureMessage += "{response.Payload=" + string(response.Payload) + "}]"
+		displayFailure(t, failureMessage)
+	}
+
+}
+
+func verifyExpectedInvalidPayload(t *testing.T, response peer.Response, failureMessage string, payload string) {
+
+	if string(response.Payload) != payload {
+		failureMessage += "{response.Payload=" + string(response.Payload) + "}]"
+		displayFailure(t, failureMessage)
+	}
+
+}
+
+func displayFailure(t *testing.T, failureMessage string) {
+	fmt.Println(failureMessage)
+	t.FailNow()
 
 }
 
