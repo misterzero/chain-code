@@ -18,8 +18,6 @@ package main
 
 import (
 	"testing"
-	"github.com/hyperledger/fabric/core/chaincode/shim"
-	"fmt"
 )
 
 func TestGetOwnershipMissingOwnership(t *testing.T){
@@ -44,31 +42,18 @@ func TestGetOwnershipExtraArgs(t *testing.T){
 
 }
 
-//TODO
 func TestOwnershipCreatedDuringPropertyTransaction(t *testing.T){
 
 	stub := getStub()
 
-	var property = Property{}
-
-	owners := getListOfOwnersForProperty(ownership_1, 0.45, ownership_2, 0.55, dateString)
-
-	property, propertyAsString := createProperty(property_1, dateString, 1000, owners)
-
-	propertyAsBytes := stub.State[property.PropertyId]
-	if propertyAsBytes != nil{
-		fmt.Println(property_1 + " should not exist.")
-		t.Fail()
-	}
-
-	invokePropertyTransaction(t, stub, property.PropertyId, propertyAsString)
+	confirmAdditionOfPropertyTransactionToLedger(t, stub, ownership_1, 0.45, ownership_2, 0.55)
 
 	propertyId := "1"
 	propertyOwnersList := getPropertyListForOwner(propertyId)
 
 	ownershipPropertyAsString := getAttributesAsString([]Attribute{propertyOwnersList[0]})
 
-	invokeGetOwnership(t, stub, owners[0].Id, ownershipPropertyAsString)
+	invokeGetOwnership(t, stub, ownership_1, ownershipPropertyAsString)
 
 }
 
@@ -76,11 +61,7 @@ func TestPropertyTransaction(t *testing.T){
 
 	stub := getStub()
 
-	ownerList := getListOfOwnersForProperty(ownership_1, 0.45, ownership_2, 0.55, dateString)
-	property, propertyString := createProperty(property_1, dateString, 1000, ownerList)
-
-	invokePropertyTransaction(t,stub, property.PropertyId, propertyString)
-	checkGetProperty(t, stub, property, propertyString)
+	confirmAdditionOfPropertyTransactionToLedger(t, stub, ownership_1, 0.45, ownership_2, 0.55)
 
 }
 
@@ -88,17 +69,8 @@ func TestMultiplePropertyTransactions(t *testing.T){
 
 	stub := getStub()
 
-	ownerList := getListOfOwnersForProperty(ownership_1, 0.45, ownership_2, 0.55, dateString)
-	property, propertyString := createProperty(property_1, dateString, 1000, ownerList)
-
-	invokePropertyTransaction(t,stub, property.PropertyId, propertyString)
-	checkGetProperty(t, stub, property, propertyString)
-
-	ownerList = getListOfOwnersForProperty(ownership_3, 0.35, ownership_4, 0.65, dateString)
-	property, propertyString = createProperty(property_1, dateString, 1000, ownerList)
-
-	invokePropertyTransaction(t,stub, property.PropertyId, propertyString)
-	checkGetProperty(t, stub, property, propertyString)
+	confirmAdditionOfPropertyTransactionToLedger(t, stub, ownership_1, 0.45, ownership_2, 0.55)
+	confirmAdditionOfPropertyTransactionToLedger(t, stub, ownership_3, 0.35, ownership_4, 0.65)
 
 }
 
@@ -106,17 +78,8 @@ func TestMultiplePropertyTransactionsWithRepeatOwners(t *testing.T){
 
 	stub := getStub()
 
-	ownerList := getListOfOwnersForProperty(ownership_1, 0.45, ownership_2, 0.55, dateString)
-	property, propertyString := createProperty(property_1, dateString, 1000, ownerList)
-
-	invokePropertyTransaction(t,stub, property.PropertyId, propertyString)
-	checkGetProperty(t, stub, property, propertyString)
-
-	ownerList = getListOfOwnersForProperty(ownership_1, 0.35, ownership_3, 0.65, dateString)
-	property, propertyString = createProperty(property_1, dateString, 1000, ownerList)
-
-	invokePropertyTransaction(t,stub, property.PropertyId, propertyString)
-	checkGetProperty(t, stub, property, propertyString)
+	confirmAdditionOfPropertyTransactionToLedger(t, stub, ownership_1, 0.45, ownership_2, 0.55)
+	confirmAdditionOfPropertyTransactionToLedger(t, stub, ownership_1, 0.35, ownership_3, 0.65)
 
 }
 

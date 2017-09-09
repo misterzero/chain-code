@@ -34,6 +34,10 @@ const totalPercentageCanNotBeGreaterThan1 = "Total Percentage can not be greater
 const atLeastOneOwnerIsRequired = "At least one owner is required."
 
 const failureMessageStart = "| FAIL [{args}, {<response-failure>}] | [{"
+const responseMessageStart = "{response.Message="
+const responseStatusStart = "{response.Status="
+const responsePayloadStart = "{response.Payload="
+
 
 func createProperty(propertyId string, saleDate string, salePrice float64, owners []Attribute) (Property, string) {
 
@@ -133,6 +137,16 @@ func getChainCodeArgs(chainCodeMethodName string, payload ...string) ([][]byte){
 
 }
 
+func confirmAdditionOfPropertyTransactionToLedger(t *testing.T, stub *shim.MockStub, ownershipId1 string, ownerPercentage1 float64, ownershipId2 string, ownershipPercentage2 float64) {
+
+	ownerList := getListOfOwnersForProperty(ownershipId1, ownerPercentage1, ownershipId2, ownershipPercentage2, dateString)
+	property, propertyString := createProperty(property_1, dateString, 1000, ownerList)
+
+	invokePropertyTransaction(t, stub, property.PropertyId, propertyString)
+	checkGetProperty(t, stub, property, propertyString)
+
+}
+
 func checkGetProperty(t *testing.T, stub *shim.MockStub, property Property, propertyString string){
 
 	args := getChainCodeArgs(getProperty, property.PropertyId)
@@ -183,7 +197,7 @@ func handleExpectedFailures(t *testing.T, stub *shim.MockStub, args [][]byte, pa
 func verifyExpectedResponseStatus(t *testing.T, response peer.Response, failureMessage string, statusValue int32) {
 
 	if response.Status != statusValue {
-		failureMessage += "{response.Status=" + strconv.FormatInt(int64(response.Status), 10) + "}]"
+		failureMessage += responseStatusStart + strconv.FormatInt(int64(response.Status), 10) + "}]"
 		displayFailure(t, failureMessage)
 	}
 
@@ -192,7 +206,7 @@ func verifyExpectedResponseStatus(t *testing.T, response peer.Response, failureM
 func verifyExpectedResponseMessage(t *testing.T, response peer.Response, failureMessage string, expectedResponseMessage string) {
 
 	if !strings.Contains(response.Message, expectedResponseMessage) {
-		failureMessage += "{response.Message=" + string(response.Message) + "}]"
+		failureMessage += responseMessageStart + string(response.Message) + "}]"
 		displayFailure(t, failureMessage)
 	}
 
@@ -201,7 +215,7 @@ func verifyExpectedResponseMessage(t *testing.T, response peer.Response, failure
 func verifyExpectedValidPayload(t *testing.T, response peer.Response, failureMessage string, payload string) {
 
 	if string(response.Payload) == payload {
-		failureMessage += "{response.Payload=" + string(response.Payload) + "}]"
+		failureMessage += responsePayloadStart + string(response.Payload) + "}]"
 		displayFailure(t, failureMessage)
 	}
 
@@ -210,7 +224,7 @@ func verifyExpectedValidPayload(t *testing.T, response peer.Response, failureMes
 func verifyExpectedInvalidPayload(t *testing.T, response peer.Response, failureMessage string, payload string) {
 
 	if string(response.Payload) != payload {
-		failureMessage += "{response.Payload=" + string(response.Payload) + "}]"
+		failureMessage += responsePayloadStart + string(response.Payload) + "}]"
 		displayFailure(t, failureMessage)
 	}
 
