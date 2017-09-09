@@ -20,6 +20,8 @@ import (
 	"testing"
 )
 
+
+//TODO code needs to be refactored to deal with the name field of Attribute better
 func TestGetOwnershipMissingOwnership(t *testing.T){
 
 	stub := getStub()
@@ -46,7 +48,11 @@ func TestOwnershipCreatedDuringPropertyTransaction(t *testing.T){
 
 	stub := getStub()
 
-	confirmAdditionOfPropertyTransactionToLedger(t, stub, ownership_1, 0.45, ownership_2, 0.55)
+	owners := []Attribute{
+		{Id: ownership_1, Percent:0.45},
+		{Id: ownership_2, Percent:0.55}}
+
+	confirmPropertyTransaction(t, stub, owners)
 
 	propertyId := "1"
 	propertyOwnersList := getPropertyListForOwner(propertyId)
@@ -61,7 +67,11 @@ func TestPropertyTransaction(t *testing.T){
 
 	stub := getStub()
 
-	confirmAdditionOfPropertyTransactionToLedger(t, stub, ownership_1, 0.45, ownership_2, 0.55)
+	owners := []Attribute{
+		{Id: ownership_1, Percent:0.45},
+		{Id: ownership_2, Percent:0.55}}
+
+	confirmPropertyTransaction(t, stub, owners)
 
 }
 
@@ -69,8 +79,17 @@ func TestMultiplePropertyTransactions(t *testing.T){
 
 	stub := getStub()
 
-	confirmAdditionOfPropertyTransactionToLedger(t, stub, ownership_1, 0.45, ownership_2, 0.55)
-	confirmAdditionOfPropertyTransactionToLedger(t, stub, ownership_3, 0.35, ownership_4, 0.65)
+	owners := []Attribute{
+		{Id: ownership_1, Percent:0.45},
+		{Id: ownership_2, Percent:0.55}}
+
+	confirmPropertyTransaction(t, stub, owners)
+
+	owners = []Attribute{
+		{Id: ownership_3, Percent:0.35},
+		{Id: ownership_4, Percent:0.65}}
+
+	confirmPropertyTransaction(t, stub, owners)
 
 }
 
@@ -78,8 +97,17 @@ func TestMultiplePropertyTransactionsWithRepeatOwners(t *testing.T){
 
 	stub := getStub()
 
-	confirmAdditionOfPropertyTransactionToLedger(t, stub, ownership_1, 0.45, ownership_2, 0.55)
-	confirmAdditionOfPropertyTransactionToLedger(t, stub, ownership_1, 0.35, ownership_3, 0.65)
+	owners := []Attribute{
+		{Id: ownership_1, Percent:0.45},
+		{Id: ownership_2, Percent:0.55}}
+
+	confirmPropertyTransaction(t, stub, owners)
+
+	owners = []Attribute{
+		{Id: ownership_1, Percent:0.35},
+		{Id: ownership_3, Percent:0.65}}
+
+	confirmPropertyTransaction(t, stub, owners)
 
 }
 
@@ -87,8 +115,11 @@ func TestPropertyTransactionExtraArgs(t *testing.T) {
 
 	stub := getStub()
 
-	ownerList := getListOfOwnersForProperty(ownership_1, 0.35, ownership_3, 0.65, dateString)
-	_, propertyAsString := createProperty(property_1, dateString, 1000, ownerList)
+	owners := []Attribute{
+		{Id: ownership_1, Percent:0.35},
+		{Id: ownership_3, Percent:0.65}}
+
+	_, propertyAsString := createProperty(property_1, owners)
 
 	args := getChainCodeArgs(getOwnership, property_1, propertyAsString, "extraArg")
 
@@ -166,11 +197,14 @@ func TestGetProperty(t *testing.T){
 
 	stub := getStub()
 
-	ownerList := getListOfOwnersForProperty(ownership_1, 0.35, ownership_3, 0.65, dateString)
-	property, propertyString := createProperty(property_1, dateString, 1000, ownerList)
+	owners := []Attribute{
+		{Id: ownership_1, Percent:0.35},
+		{Id: ownership_3, Percent:0.65}}
+
+	property, propertyString := createProperty(property_1, owners)
 
 	invokePropertyTransaction(t, stub, property.PropertyId, propertyString)
-	checkGetProperty(t, stub, property, propertyString)
+	invokeGetProperty(t, stub, property, propertyString)
 
 }
 
@@ -178,8 +212,11 @@ func TestGetPropertyExtraArgs(t *testing.T){
 
 	stub := getStub()
 
-	ownerList := getListOfOwnersForProperty(ownership_1, 0.35, ownership_3, 0.65, dateString)
-	property, propertyString := createProperty(property_1, dateString, 1000, ownerList)
+	owners := []Attribute{
+		{Id: ownership_1, Percent:0.35},
+		{Id: ownership_3, Percent:0.65}}
+
+	property, propertyString := createProperty(property_1, owners)
 
 	invokePropertyTransaction(t, stub, property.PropertyId, propertyString)
 
