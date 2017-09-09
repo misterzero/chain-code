@@ -53,25 +53,6 @@ func createProperty(propertyId string, owners []Attribute) (Property, string) {
 
 }
 
-func getPropertyListForOwner(propertyId string) []Attribute{
-
-	property1 := Attribute{}
-	property2 := Attribute{}
-
-	property1.Id = propertyId
-	property1.Percent = 0.45
-	property1.SaleDate = dateString
-
-	property2.Id = propertyId
-	property2.Percent = 0.55
-	property2.SaleDate = dateString
-
-	ownershipInputList := []Attribute{property1, property2}
-
-	return ownershipInputList
-
-}
-
 func getChainCodeArgs(chainCodeMethodName string, payload ...string) ([][]byte){
 
 	args := [][]byte{[]byte(chainCodeMethodName), []byte(chainCodeMethodName)}

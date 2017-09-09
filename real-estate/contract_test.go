@@ -20,7 +20,6 @@ import (
 	"testing"
 )
 
-
 //TODO code needs to be refactored to deal with the name field of Attribute better
 func TestGetOwnershipMissingOwnership(t *testing.T){
 
@@ -54,10 +53,8 @@ func TestOwnershipCreatedDuringPropertyTransaction(t *testing.T){
 
 	confirmPropertyTransaction(t, stub, owners)
 
-	propertyId := "1"
-	propertyOwnersList := getPropertyListForOwner(propertyId)
-
-	ownershipPropertyAsString := getAttributesAsString([]Attribute{propertyOwnersList[0]})
+	property := []Attribute{{Id:"1", Percent:0.45, SaleDate:dateString}}
+	ownershipPropertyAsString := getAttributesAsString(property)
 
 	invokeGetOwnership(t, stub, ownership_1, ownershipPropertyAsString)
 
