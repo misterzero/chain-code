@@ -38,6 +38,7 @@ const responseMessageStart = "{response.Message="
 const responseStatusStart = "{response.Status="
 const responsePayloadStart = "{response.Payload="
 
+//TODO break this up a little
 type TestContext struct {
 
 	t				   *testing.T
@@ -45,6 +46,7 @@ type TestContext struct {
 	MethodName         string
 	Payload            string
 	Arguments          [][]byte
+	ArgumentBuilder    []string
 	Id                 string
 	Attributes         []Attribute
 	TestFailureMessage string
@@ -71,9 +73,24 @@ func createProperty(context TestContext) (string) {
 //TODO convert to use just the context object as parameter
 func getChainCodeArgs(chainCodeMethodName string, payload ...string) ([][]byte) {
 
+	fmt.Println("payloadLength: ", len(payload))
+
 	args := [][]byte{[]byte(chainCodeMethodName), []byte(chainCodeMethodName)}
 	for i := 0; i < len(payload); i++ {
 		args = append(args, []byte(payload[i]))
+	}
+
+	return args
+
+}
+
+func getChainCodeArgs2(context TestContext) ([][]byte) {
+
+	fmt.Println("payloadLength: ", len(context.ArgumentBuilder))
+
+	args := [][]byte{[]byte(context.MethodName), []byte(context.MethodName)}
+	for i := 0; i < len(context.ArgumentBuilder); i++ {
+		args = append(args, []byte(context.ArgumentBuilder[i]))
 	}
 
 	return args
@@ -84,9 +101,13 @@ func confirmPropertyTransaction(context TestContext) {
 
 	context.Payload = createProperty(context)
 
+	//fmt.Println("context.Payload1.2: ", context.Payload)
+
 	invokePropertyTransaction(context)
 
 	context.MethodName = getProperty
+
+	fmt.Println("made it here")
 
 	invokeGetProperty(context)
 
@@ -94,7 +115,8 @@ func confirmPropertyTransaction(context TestContext) {
 
 func invokeGetProperty(context TestContext) {
 
-	context.Arguments = getChainCodeArgs(context.MethodName, context.Id)
+	//context.Arguments = getChainCodeArgs(context.MethodName, context.Id)
+	context.Arguments = getChainCodeArgs2(context)
 
 	handleExpectedSuccess(context)
 
@@ -102,7 +124,8 @@ func invokeGetProperty(context TestContext) {
 
 func invokeGetOwnership(context TestContext) {
 
-	context.Arguments = getChainCodeArgs(context.MethodName, context.Id)
+	//context.Arguments = getChainCodeArgs(context.MethodName, context.Id)
+	context.Arguments = getChainCodeArgs2(context)
 
 	handleExpectedSuccess(context)
 
@@ -110,7 +133,8 @@ func invokeGetOwnership(context TestContext) {
 
 func invokePropertyTransaction(context TestContext) {
 
-	context.Arguments = getChainCodeArgs(context.MethodName, context.Id, context.Payload)
+	//context.Arguments = getChainCodeArgs(context.MethodName, context.Id, context.Payload)
+	context.Arguments = getChainCodeArgs2(context)
 
 	context.Payload = ""
 
@@ -121,6 +145,7 @@ func invokePropertyTransaction(context TestContext) {
 func handleExpectedSuccess(context TestContext) {
 
 	context.Response = context.Stub.MockInvoke(context.MethodName, context.Arguments)
+	fmt.Println("Response: ", context.Response)
 
 	context.TestFailureMessage = failureMessageStart + context.MethodName + ", " + context.Payload + "}, "
 
