@@ -52,22 +52,7 @@ type SessionContext struct {
 
 }
 
-//TODO set this up to accept only context
-func createProperty(propertyId string, owners []Attribute) (Property, string) {
-
-	property := Property{}
-	property.PropertyId = propertyId
-	property.SaleDate = dateString
-	property.SalePrice = salePrice
-	property.Owners = owners
-
-	propertyAsBytes, _ := getPropertyAsBytes(property)
-
-	return property, string(propertyAsBytes)
-
-}
-
-func createProperty2(context SessionContext) (Property, string) {
+func createProperty(context SessionContext) (Property, string) {
 
 	property := Property{}
 	property.PropertyId = context.Id
@@ -93,84 +78,53 @@ func getChainCodeArgs(chainCodeMethodName string, payload ...string) ([][]byte) 
 
 }
 
-//TODO working
-func confirmPropertyTransaction2(t *testing.T, stub *shim.MockStub, context SessionContext) {
+func confirmPropertyTransaction(t *testing.T, stub *shim.MockStub, context SessionContext) {
 
-	_, context.Payload = createProperty2(context)
+	_, context.Payload = createProperty(context)
 
-	invokePropertyTransaction2(t, stub, context)
+	invokePropertyTransaction(t, stub, context)
 
 	context.MethodName = getProperty
-	invokeGetProperty2(t, stub, context)
+	invokeGetProperty(t, stub, context)
 
 }
 
-func invokeGetProperty(t *testing.T, stub *shim.MockStub, propertyId, propertyString string) {
-
-	args := getChainCodeArgs(getProperty, propertyId)
-
-	handleExpectedSuccess(t, stub, getProperty, args, propertyString)
-
-}
-
-func invokeGetProperty2(t *testing.T, stub *shim.MockStub, context SessionContext) {
+func invokeGetProperty(t *testing.T, stub *shim.MockStub, context SessionContext) {
 
 	context.Arguments = getChainCodeArgs(context.MethodName, context.Id)
 
-	handleExpectedSuccess2(t, stub, context)
+	handleExpectedSuccess(t, stub, context)
 
 }
 
-func invokeGetOwnership2(t *testing.T, stub *shim.MockStub, context SessionContext) {
+func invokeGetOwnership(t *testing.T, stub *shim.MockStub, context SessionContext) {
 
 	context.Arguments = getChainCodeArgs(context.MethodName, context.Id)
 
-	handleExpectedSuccess2(t, stub, context)
+	handleExpectedSuccess(t, stub, context)
 
 }
 
-func invokePropertyTransaction(t *testing.T, stub *shim.MockStub, propertyId string, payload string ) {
-
-	args := getChainCodeArgs(propertyTransaction, propertyId, payload)
-	handleExpectedSuccess(t, stub, propertyTransaction, args, "")
-
-}
-
-func invokePropertyTransaction2(t *testing.T, stub *shim.MockStub, context SessionContext) {
+func invokePropertyTransaction(t *testing.T, stub *shim.MockStub, context SessionContext) {
 
 	context.Arguments = getChainCodeArgs(context.MethodName, context.Id, context.Payload)
 
 	context.Payload = ""
 
-	handleExpectedSuccess2(t, stub, context)
+	handleExpectedSuccess(t, stub, context)
 
 }
 
-
-//TODO less parameters
-func handleExpectedSuccess(t *testing.T, stub *shim.MockStub, argument string, args [][]byte, payload string) {
-
-	response := stub.MockInvoke(argument, args)
-
-	fmt.Println("Response: ", response)
-
-	failureMessage := failureMessageStart + argument + ", " + payload + "}, "
-
-	verifyExpectedResponseStatus(t, response, failureMessage, shim.OK)
-	verifyNotExpectedPayload(t, response, failureMessage, payload)
-
-}
-
-func handleExpectedSuccess2(t *testing.T, stub *shim.MockStub, context SessionContext) {
+func handleExpectedSuccess(t *testing.T, stub *shim.MockStub, context SessionContext) {
 
 	context.Response = stub.MockInvoke(context.MethodName, context.Arguments)
 
 	context.TestFailureMessage = failureMessageStart + context.MethodName + ", " + context.Payload + "}, "
 
 	context.ExpectedStatus = shim.OK
-	verifyExpectedResponseStatus2(t, context)
+	verifyExpectedResponseStatus(t, context)
 
-	verifyNotExpectedPayload2(t, context)
+	verifyNotExpectedPayload(t, context)
 
 }
 
@@ -180,22 +134,13 @@ func handleExpectedFailures(t *testing.T, stub *shim.MockStub, context SessionCo
 	context.TestFailureMessage = failureMessageStart + context.MethodName + ", " + context.Payload + "}, "
 	context.ExpectedStatus = shim.ERROR
 
-	verifyExpectedResponseStatus2(t, context)
-	verifyExpectedResponseMessage2(t, context)
-	verifyExpectedPayload2(t, context)
-
-}
-//TODO less parameters
-func verifyExpectedResponseStatus(t *testing.T, response peer.Response, failureMessage string, statusValue int32) {
-
-	if response.Status != statusValue {
-		failureMessage += responseStatusStart + strconv.FormatInt(int64(response.Status), 10) + "}]"
-		displayTestFailure(t, failureMessage)
-	}
+	verifyExpectedResponseStatus(t, context)
+	verifyExpectedResponseMessage(t, context)
+	verifyExpectedPayload(t, context)
 
 }
 
-func verifyExpectedResponseStatus2(t *testing.T, context SessionContext) {
+func verifyExpectedResponseStatus(t *testing.T, context SessionContext) {
 
 	if context.Response.Status != context.ExpectedStatus{
 		context.TestFailureMessage += responseStatusStart + strconv.FormatInt(int64(context.Response.Status), 10) + "}]"
@@ -204,9 +149,9 @@ func verifyExpectedResponseStatus2(t *testing.T, context SessionContext) {
 
 }
 
-func verifyExpectedResponseMessage2(t *testing.T, context SessionContext) {
+func verifyExpectedResponseMessage(t *testing.T, context SessionContext) {
 
-	verifyExpectedResponseMessageSet2(t, context)
+	verifyExpectedResponseMessageSet(t, context)
 
 	if !strings.Contains(context.Response.Message, context.ExpectedResponse) {
 		context.TestFailureMessage += responseMessageStart + string(context.Response.Message) + "}]"
@@ -215,14 +160,17 @@ func verifyExpectedResponseMessage2(t *testing.T, context SessionContext) {
 
 }
 
-func verifyExpectedResponseMessageSet2(t *testing.T, context SessionContext) {
+func verifyExpectedResponseMessageSet(t *testing.T, context SessionContext) {
 	if len(context.ExpectedResponse) == 0 {
 		failureMessage := "ExpectedResponse is empty in Context"
 		displayTestFailure(t, failureMessage)
 	}
 }
 
-func verifyExpectedPayload2(t *testing.T, context SessionContext) {
+func verifyExpectedPayload(t *testing.T, context SessionContext) {
+
+	fmt.Println("Full Response: ", context.Response)
+	fmt.Println("Payload: ", context.Response.Payload)
 
 	if string(context.Response.Payload) == context.Payload {
 		context.TestFailureMessage += responsePayloadStart + string(context.Response.Payload) + "}]"
@@ -231,18 +179,7 @@ func verifyExpectedPayload2(t *testing.T, context SessionContext) {
 
 }
 
-//TODO less parameters
-//TODO needs new name
-func verifyNotExpectedPayload(t *testing.T, response peer.Response, failureMessage string, payload string) {
-
-	if string(response.Payload) != payload {
-		failureMessage += responsePayloadStart + string(response.Payload) + "}]"
-		displayTestFailure(t, failureMessage)
-	}
-
-}
-
-func verifyNotExpectedPayload2(t *testing.T, context SessionContext) {
+func verifyNotExpectedPayload(t *testing.T, context SessionContext) {
 
 	if string(context.Response.Payload) != context.Payload {
 		context.TestFailureMessage += responsePayloadStart + string(context.Response.Payload) + "}]"

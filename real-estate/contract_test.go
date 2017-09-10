@@ -20,7 +20,6 @@ import (
 	"testing"
 )
 
-// TODO reduce parameters for invokePropertyTransaction
 // TODO make context class level var that will be reused
 // TODO the context should not be updated as it is passed around, just used ... refactor opportunity
 func TestGetOwnershipMissingOwnership(t *testing.T) {
@@ -52,7 +51,7 @@ func TestGetOwnershipExtraArgs(t *testing.T) {
 
 }
 
-func TestOwnershipCreatedDuringPropertyTransaction2(t *testing.T) {
+func TestOwnershipCreatedDuringPropertyTransaction(t *testing.T) {
 
 	stub := getStub()
 
@@ -64,7 +63,7 @@ func TestOwnershipCreatedDuringPropertyTransaction2(t *testing.T) {
 		{Id: ownership_1, Percent:0.45},
 		{Id: ownership_2, Percent:0.55}}
 
-	confirmPropertyTransaction2(t,stub, context)
+	confirmPropertyTransaction(t,stub, context)
 
 	context = SessionContext{}
 	context.MethodName = getOwnership
@@ -73,7 +72,7 @@ func TestOwnershipCreatedDuringPropertyTransaction2(t *testing.T) {
 	property := []Attribute{{Id:"1", Percent:0.45, SaleDate:dateString}}
 	context.Payload = getAttributesAsString(property)
 
-	invokeGetOwnership2(t, stub, context)
+	invokeGetOwnership(t, stub, context)
 
 }
 
@@ -89,7 +88,7 @@ func TestPropertyTransaction(t *testing.T) {
 		{Id: ownership_1, Percent:0.45},
 		{Id: ownership_2, Percent:0.55}}
 
-	confirmPropertyTransaction2(t, stub, context)
+	confirmPropertyTransaction(t, stub, context)
 }
 
 func TestMultiplePropertyTransactions(t *testing.T) {
@@ -104,7 +103,7 @@ func TestMultiplePropertyTransactions(t *testing.T) {
 		{Id: ownership_1, Percent:0.45},
 		{Id: ownership_2, Percent:0.55}}
 
-	confirmPropertyTransaction2(t, stub, context)
+	confirmPropertyTransaction(t, stub, context)
 
 	context = SessionContext{}
 	context.MethodName = propertyTransaction
@@ -114,7 +113,7 @@ func TestMultiplePropertyTransactions(t *testing.T) {
 		{Id: ownership_3, Percent:0.35},
 		{Id: ownership_4, Percent:0.65}}
 
-	confirmPropertyTransaction2(t, stub, context)
+	confirmPropertyTransaction(t, stub, context)
 
 }
 
@@ -135,7 +134,7 @@ func TestMultiplePropertyTransactionsWithRepeatOwners(t *testing.T) {
 			{Id: ownership_2, Percent:0.55}}
 
 	//confirmPropertyTransaction(t, stub, owners)
-	confirmPropertyTransaction2(t, stub, context)
+	confirmPropertyTransaction(t, stub, context)
 
 	context = SessionContext{}
 	context.MethodName = propertyTransaction
@@ -150,7 +149,7 @@ func TestMultiplePropertyTransactionsWithRepeatOwners(t *testing.T) {
 		{Id: ownership_3, Percent:0.65}}
 
 	//confirmPropertyTransaction(t, stub, owners)
-	confirmPropertyTransaction2(t, stub, context)
+	confirmPropertyTransaction(t, stub, context)
 
 }
 
@@ -158,16 +157,16 @@ func TestPropertyTransactionExtraArgs(t *testing.T) {
 
 	stub := getStub()
 
-	owners := []Attribute{
+	context := SessionContext{}
+	context.MethodName = getOwnership
+	context.Id = property_1
+
+	context.Attributes = []Attribute{
 		{Id: ownership_1, Percent:0.35},
 		{Id: ownership_3, Percent:0.65}}
 
-	_, propertyAsString := createProperty(property_1, owners)
+	_, context.Payload = createProperty(context)
 
-	context := SessionContext{}
-	context.MethodName = getOwnership
-	context.Payload = propertyAsString
-	context.Id = property_1
 	context.Arguments = getChainCodeArgs(context.MethodName, context.Id, context.Payload, "extraArgs")
 	context.ExpectedResponse = incorrectNumberOfArgs
 
@@ -281,14 +280,17 @@ func TestGetProperty(t *testing.T) {
 
 	stub := getStub()
 
-	owners := []Attribute{
+	context := SessionContext{}
+	context.MethodName = propertyTransaction
+	context.Id = property_1
+
+	context.Attributes = []Attribute{
 		{Id: ownership_1, Percent:0.35},
 		{Id: ownership_3, Percent:0.65}}
 
-	property, propertyString := createProperty(property_1, owners)
+	_, context.Payload = createProperty(context)
 
-	invokePropertyTransaction(t, stub, property.PropertyId, propertyString)
-	invokeGetProperty(t, stub, property.PropertyId, propertyString)
+	 confirmPropertyTransaction(t, stub, context)
 
 }
 
@@ -296,17 +298,21 @@ func TestGetPropertyExtraArgs(t *testing.T) {
 
 	stub := getStub()
 
-	owners := []Attribute{
+	context := SessionContext{}
+	context.MethodName = propertyTransaction
+	context.Id = property_1
+
+	context.Attributes = []Attribute{
 		{Id: ownership_1, Percent:0.35},
 		{Id: ownership_3, Percent:0.65}}
 
-	property, propertyString := createProperty(property_1, owners)
+	_, context.Payload = createProperty(context)
 
-	invokePropertyTransaction(t, stub, property.PropertyId, propertyString)
+	confirmPropertyTransaction(t, stub, context)
 
-	context := SessionContext{}
+	context = SessionContext{}
 	context.MethodName = getProperty
-	context.Payload = propertyString
+	context.Payload = "invalidProperty"
 	context.Id = property_1
 	context.ExpectedResponse = incorrectNumberOfArgs
 	context.Arguments = getChainCodeArgs(context.MethodName, context.Id, context.Payload)
