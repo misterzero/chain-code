@@ -38,33 +38,38 @@ const responseMessageStart = "{response.Message="
 const responseStatusStart = "{response.Status="
 const responsePayloadStart = "{response.Payload="
 
-//TODO break this up a little
-type TestContext struct {
-
-	t				   *testing.T
-	Stub			   *shim.MockStub
-	MethodName         string
-	Payload            string
-	Arguments          [][]byte
-	ArgumentBuilder    []string
-	Id                 string
-	Attributes         []Attribute
-	TestFailureMessage string
-	ExpectedStatus     int32
-	ExpectedResponse   string
-	ExpectFailure	   bool
-	Response           peer.Response
-
-
+type SessionContext struct {
+	Test      					TestContext
+	Arguments 					ArgumentContext
 }
 
-func createProperty(context TestContext) (string) {
+type TestContext struct {
+	t                       	*testing.T
+	Stub                    	*shim.MockStub
+	TestFailureMessage      	string
+	ExpectedStatus          	int32
+	ExpectedResponseMessage 	string
+	ExpectedResponsePayload 	string
+	ShouldFailTest          	bool
+	Response                	peer.Response
+}
+
+type ArgumentContext struct{
+	MethodName    				string
+	Payload       				string
+	ChainCodeArgs 				[][]byte
+	Builder       				[]string
+	Id            				string
+	Attributes    				[]Attribute
+}
+
+func createProperty(context SessionContext) (string) {
 
 	property := Property{}
-	property.PropertyId = context.Id
+	property.PropertyId = context.Arguments.Id
 	property.SaleDate = dateString
 	property.SalePrice = salePrice
-	property.Owners = context.Attributes
+	property.Owners = context.Arguments.Attributes
 
 	propertyAsBytes, _ := getPropertyAsBytes(property)
 
@@ -72,52 +77,57 @@ func createProperty(context TestContext) (string) {
 
 }
 
-func getChainCodeArgs(context TestContext) ([][]byte) {
+func getChainCodeArgs(context SessionContext) ([][]byte) {
 
-	fmt.Println("payloadLength: ", len(context.ArgumentBuilder))
-
-	args := [][]byte{[]byte(context.MethodName), []byte(context.MethodName)}
-	for i := 0; i < len(context.ArgumentBuilder); i++ {
-		args = append(args, []byte(context.ArgumentBuilder[i]))
+	args := [][]byte{[]byte(context.Arguments.MethodName), []byte(context.Arguments.MethodName)}
+	for i := 0; i < len(context.Arguments.Builder); i++ {
+		args = append(args, []byte(context.Arguments.Builder[i]))
 	}
 
 	return args
 
 }
 
-//TODO this needs some work
-func invokePropertyTransaction(context TestContext){
+func invokePropertyTransaction(context SessionContext) {
+	invoke(context)
+}
 
-	context.Arguments = getChainCodeArgs(context)
+func invokeGetOwnership(context SessionContext) {
+	invoke(context)
+}
 
-	if context.ExpectFailure {
+func invokeGetProperty(context SessionContext) {
+	invoke(context)
+}
+
+func invoke(context SessionContext){
+
+	context.Arguments.ChainCodeArgs = getChainCodeArgs(context)
+
+	if context.Test.ShouldFailTest {
 		confirmExpectedTestFailure(context)
 	}else {
-
-		//TODO this is hacky and needs to be fixed
-		context.Payload = ""
-
 		confirmExpectedTestSuccess(context)
 	}
 
 }
 
-func confirmExpectedTestSuccess(context TestContext) {
+func confirmExpectedTestSuccess(context SessionContext) {
 
-	context.Response = context.Stub.MockInvoke(context.MethodName, context.Arguments)
-	context.TestFailureMessage = failureMessageStart + context.MethodName + ", " + context.Payload + "}, "
-	context.ExpectedStatus = shim.OK
+	context.Test.Response = context.Test.Stub.MockInvoke(context.Arguments.MethodName, context.Arguments.ChainCodeArgs)
+	context.Test.TestFailureMessage = failureMessageStart + context.Arguments.MethodName + ", " + context.Arguments.Payload + "}, "
+	context.Test.ExpectedStatus = shim.OK
 
 	verifyExpectedResponseStatus(context)
-	verifyNotExpectedPayload(context)
+	verifyExpectedPayload(context)
 
 }
 
-func confirmExpectedTestFailure(context TestContext) {
+func confirmExpectedTestFailure(context SessionContext) {
 
-	context.Response = context.Stub.MockInvoke(context.MethodName, context.Arguments)
-	context.TestFailureMessage = failureMessageStart + context.MethodName + ", " + context.Payload + "}, "
-	context.ExpectedStatus = shim.ERROR
+	context.Test.Response = context.Test.Stub.MockInvoke(context.Arguments.MethodName, context.Arguments.ChainCodeArgs)
+	context.Test.TestFailureMessage = failureMessageStart + context.Arguments.MethodName + ", " + context.Arguments.Payload + "}, "
+	context.Test.ExpectedStatus = shim.ERROR
 
 	verifyExpectedResponseStatus(context)
 	verifyExpectedResponseMessage(context)
@@ -125,54 +135,47 @@ func confirmExpectedTestFailure(context TestContext) {
 
 }
 
-func verifyExpectedResponseStatus(context TestContext) {
+func verifyExpectedResponseStatus(context SessionContext) {
 
-	if context.Response.Status != context.ExpectedStatus{
-		context.TestFailureMessage += responseStatusStart + strconv.FormatInt(int64(context.Response.Status), 10) + "}]"
+	if context.Test.Response.Status != context.Test.ExpectedStatus{
+		context.Test.TestFailureMessage += responseStatusStart + strconv.FormatInt(int64(context.Test.Response.Status), 10) + "}]"
 		displayTestFailure(context)
 	}
 
 }
 
-func verifyExpectedResponseMessage(context TestContext) {
+func verifyExpectedResponseMessage(context SessionContext) {
 
 	verifyExpectedResponseMessageSet(context)
 
-	if !strings.Contains(context.Response.Message, context.ExpectedResponse) {
-		context.TestFailureMessage += responseMessageStart + string(context.Response.Message) + "}]"
+	if !strings.Contains(context.Test.Response.Message, context.Test.ExpectedResponseMessage) {
+		context.Test.TestFailureMessage += responseMessageStart + string(context.Test.Response.Message) + "}]"
 		displayTestFailure(context)
 	}
 
 }
 
-func verifyExpectedResponseMessageSet(context TestContext) {
-	if len(context.ExpectedResponse) == 0 {
-		context.TestFailureMessage = "ExpectedResponse is empty in Context"
-		displayTestFailure(context)
-	}
-}
+func verifyExpectedResponseMessageSet(context SessionContext) {
 
-func verifyExpectedPayload(context TestContext) {
-
-	if string(context.Response.Payload) == context.Payload {
-		context.TestFailureMessage += responsePayloadStart + string(context.Response.Payload) + "}]"
+	if len(context.Test.ExpectedResponseMessage) == 0 {
+		context.Test.TestFailureMessage = "ExpectedResponseMessage is empty in Context"
 		displayTestFailure(context)
 	}
 
 }
 
-func verifyNotExpectedPayload(context TestContext) {
+func verifyExpectedPayload(context SessionContext) {
 
-	if string(context.Response.Payload) != context.Payload {
-		context.TestFailureMessage += responsePayloadStart + string(context.Response.Payload) + "}]"
+	if string(context.Test.Response.Payload) != context.Test.ExpectedResponsePayload{
+		context.Test.TestFailureMessage += responsePayloadStart + string(context.Test.Response.Payload) + "}]"
 		displayTestFailure(context)
 	}
 
 }
 
-func displayTestFailure(context TestContext) {
-	fmt.Println(context.TestFailureMessage)
-	context.t.FailNow()
+func displayTestFailure(context SessionContext) {
+	fmt.Println(context.Test.TestFailureMessage)
+	context.Test.t.FailNow()
 
 }
 
@@ -185,11 +188,11 @@ func getStub() (*shim.MockStub) {
 
 }
 
-func getTestContext(t *testing.T, stub *shim.MockStub) (TestContext){
+func getTestContext(t *testing.T, stub *shim.MockStub) (SessionContext){
 
-	context := TestContext{}
-	context.t = t
-	context.Stub = stub
+	context := SessionContext{}
+	context.Test.Stub = stub
+	context.Test.t = t
 
 	return context
 

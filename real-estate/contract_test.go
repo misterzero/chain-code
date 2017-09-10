@@ -20,21 +20,19 @@ import (
 	"testing"
 )
 
-// TODO the context should not be updated as it is passed around, just used ... refactor opportunity
 func TestGetOwnershipMissingOwnership(t *testing.T) {
 
 	stub := getStub()
 
 	context := getTestContext(t, stub)
-	context.MethodName = getOwnership
-	context.Payload = ownership_1
-	//context.Arguments = getChainCodeArgs(context.MethodName, context.Payload)
-	context.ArgumentBuilder = []string{context.Payload}
-	context.Arguments = getChainCodeArgs(context)
-	//context.Arguments = getChainCodeArgs(context.MethodName, context.Payload)
-	context.ExpectedResponse = nilValueForOwnershipId
+	context.Arguments.MethodName = getOwnership
+	context.Arguments.Payload = ownership_1
+	context.Arguments.Builder = []string{context.Arguments.Payload}
 
-	confirmExpectedTestFailure(context)
+	context.Test.ExpectedResponseMessage = nilValueForOwnershipId
+	context.Test.ShouldFailTest = true
+
+	invokeGetOwnership(context)
 
 }
 
@@ -43,15 +41,15 @@ func TestGetOwnershipExtraArgs(t *testing.T) {
 	stub := getStub()
 
 	context := getTestContext(t, stub)
-	context.MethodName = getOwnership
-	context.Payload = invalidArgument
-	context.Id = ownership_1
-	//context.Arguments = getChainCodeArgs(context.MethodName, context.Id, context.Payload)
-	context.ArgumentBuilder = []string{context.Id, context.Payload}
-	context.Arguments = getChainCodeArgs(context)
-	context.ExpectedResponse = incorrectNumberOfArgs
+	context.Arguments.MethodName = getOwnership
+	context.Arguments.Payload = invalidArgument
+	context.Arguments.Id = ownership_1
+	context.Arguments.Builder = []string{context.Arguments.Id, context.Arguments.Payload}
 
-	confirmExpectedTestFailure(context)
+	context.Test.ExpectedResponseMessage = incorrectNumberOfArgs
+	context.Test.ShouldFailTest = true
+
+	invokeGetOwnership(context)
 
 }
 
@@ -60,29 +58,31 @@ func TestOwnershipCreatedDuringPropertyTransaction(t *testing.T) {
 	stub := getStub()
 
 	context := getTestContext(t, stub)
-	context.MethodName = propertyTransaction
-	context.Id = property_1
+	context.Arguments.MethodName = propertyTransaction
+	context.Arguments.Id = property_1
 
-	context.Attributes = []Attribute{
+	context.Arguments.Attributes = []Attribute{
 		{Id: ownership_1, Percent:0.45},
 		{Id: ownership_2, Percent:0.55}}
 
-	context.Payload = createProperty(context)
-	context.ArgumentBuilder = []string{context.Id, context.Payload}
+	context.Arguments.Payload = createProperty(context)
+	context.Arguments.Builder = []string{context.Arguments.Id, context.Arguments.Payload}
+
+	context.Test.ExpectedResponsePayload = ""
 
 	invokePropertyTransaction(context)
 
 	context = getTestContext(t, stub)
-	context.Id = ownership_1
-	context.MethodName = getOwnership
+	context.Arguments.Id = ownership_1
+	context.Arguments.MethodName = getOwnership
 
 	property := []Attribute{{Id:"1", Percent:0.45, SaleDate:dateString}}
-	context.Payload = getAttributesAsString(property)
+	context.Arguments.Payload = getAttributesAsString(property)
+	context.Arguments.Builder = []string{context.Arguments.Id}
 
-	context.ArgumentBuilder = []string{context.Id}
-	context.Arguments = getChainCodeArgs(context)
+	context.Test.ExpectedResponsePayload = context.Arguments.Payload
 
-	confirmExpectedTestSuccess(context)
+	invokeGetOwnership(context)
 
 }
 
@@ -91,15 +91,17 @@ func TestPropertyTransaction(t *testing.T) {
 	stub := getStub()
 
 	context := getTestContext(t, stub)
-	context.MethodName = propertyTransaction
-	context.Id = property_1
+	context.Arguments.MethodName = propertyTransaction
+	context.Arguments.Id = property_1
 
-	context.Attributes = []Attribute{
+	context.Arguments.Attributes = []Attribute{
 		{Id: ownership_1, Percent:0.45},
 		{Id: ownership_2, Percent:0.55}}
 
-	context.Payload = createProperty(context)
-	context.ArgumentBuilder = []string{context.Id, context.Payload}
+	context.Arguments.Payload = createProperty(context)
+	context.Arguments.Builder = []string{context.Arguments.Id, context.Arguments.Payload}
+
+	context.Test.ExpectedResponsePayload = ""
 
 	invokePropertyTransaction(context)
 
@@ -110,31 +112,34 @@ func TestMultiplePropertyTransactions(t *testing.T) {
 	stub := getStub()
 
 	context := getTestContext(t, stub)
-	context.MethodName = propertyTransaction
-	context.Id = property_1
+	context.Arguments.MethodName = propertyTransaction
+	context.Arguments.Id = property_1
 
-	context.Attributes = []Attribute{
+	context.Arguments.Attributes = []Attribute{
 		{Id: ownership_1, Percent:0.45},
 		{Id: ownership_2, Percent:0.55}}
 
-	context.Payload = createProperty(context)
-	context.ArgumentBuilder = []string{context.Id, context.Payload}
+	context.Arguments.Payload = createProperty(context)
+	context.Arguments.Builder = []string{context.Arguments.Id, context.Arguments.Payload}
+
+	context.Test.ExpectedResponsePayload = ""
 
 	invokePropertyTransaction(context)
 
 	context = getTestContext(t, stub)
-	context.MethodName = propertyTransaction
-	context.Id = property_1
+	context.Arguments.MethodName = propertyTransaction
+	context.Arguments.Id = property_1
 
-	context.Attributes = []Attribute{
+	context.Arguments.Attributes = []Attribute{
 		{Id: ownership_3, Percent:0.35},
 		{Id: ownership_4, Percent:0.65}}
 
-	context.Payload = createProperty(context)
-	context.ArgumentBuilder = []string{context.Id, context.Payload}
+	context.Arguments.Payload = createProperty(context)
+	context.Arguments.Builder = []string{context.Arguments.Id, context.Arguments.Payload}
+
+	context.Test.ExpectedResponsePayload = ""
 
 	invokePropertyTransaction(context)
-
 }
 
 func TestMultiplePropertyTransactionsWithRepeatOwners(t *testing.T) {
@@ -142,28 +147,32 @@ func TestMultiplePropertyTransactionsWithRepeatOwners(t *testing.T) {
 	stub := getStub()
 
 	context := getTestContext(t, stub)
-	context.MethodName = propertyTransaction
-	context.Id = property_1
+	context.Arguments.MethodName = propertyTransaction
+	context.Arguments.Id = property_1
 
-	context.Attributes = []Attribute{
+	context.Arguments.Attributes = []Attribute{
 			{Id: ownership_1, Percent:0.45},
 			{Id: ownership_2, Percent:0.55}}
 
-	context.Payload = createProperty(context)
-	context.ArgumentBuilder = []string{context.Id, context.Payload}
+	context.Arguments.Payload = createProperty(context)
+	context.Arguments.Builder = []string{context.Arguments.Id, context.Arguments.Payload}
+
+	context.Test.ExpectedResponsePayload = ""
 
 	invokePropertyTransaction(context)
 
 	context = getTestContext(t, stub)
-	context.MethodName = propertyTransaction
-	context.Id = property_1
+	context.Arguments.MethodName = propertyTransaction
+	context.Arguments.Id = property_1
 
-	context.Attributes = []Attribute{
+	context.Arguments.Attributes = []Attribute{
 		{Id: ownership_1, Percent:0.35},
 		{Id: ownership_3, Percent:0.65}}
 
-	context.Payload = createProperty(context)
-	context.ArgumentBuilder = []string{context.Id, context.Payload}
+	context.Arguments.Payload = createProperty(context)
+	context.Arguments.Builder = []string{context.Arguments.Id, context.Arguments.Payload}
+
+	context.Test.ExpectedResponsePayload = ""
 
 	invokePropertyTransaction(context)
 
@@ -174,20 +183,21 @@ func TestPropertyTransactionExtraArgs(t *testing.T) {
 	stub := getStub()
 
 	context := getTestContext(t, stub)
-	context.MethodName = getOwnership
-	context.Id = property_1
+	context.Arguments.MethodName = getOwnership
+	context.Arguments.Id = property_1
 
-	context.Attributes = []Attribute{
+	context.Arguments.Attributes = []Attribute{
 		{Id: ownership_1, Percent:0.35},
 		{Id: ownership_3, Percent:0.65}}
 
-	context.Payload = createProperty(context)
-	context.ArgumentBuilder = []string{context.Payload, context.Id, context.Payload, "extraArgs"}
-	context.ExpectedResponse = incorrectNumberOfArgs
-	context.ExpectFailure = true
+	context.Arguments.Payload = createProperty(context)
+	context.Arguments.Builder = []string{context.Arguments.Payload, context.Arguments.Id, context.Arguments.Payload, "extraArgs"}
+	context.Test.ExpectedResponseMessage = incorrectNumberOfArgs
+	context.Test.ShouldFailTest = true
+
+	context.Test.ExpectedResponsePayload = ""
 
 	invokePropertyTransaction(context)
-
 }
 
 func TestPropertyTransactionStringAsSalePrice(t *testing.T) {
@@ -195,15 +205,16 @@ func TestPropertyTransactionStringAsSalePrice(t *testing.T) {
 	stub := getStub()
 
 	context := getTestContext(t, stub)
-	context.MethodName = propertyTransaction
-	context.Payload = `{"saleDate":"2017-06-28T21:57:16","salePrice":"1000","owners":[{"id":"ownership_3","percentage":0.45},{"id":"ownerhip_2","percentage":0.55}]}`
-	context.Id = property_1
-	context.ExpectedResponse = cannotUnmarshalStringIntoFloat64
-	context.ArgumentBuilder = []string{context.Id, context.Payload}
-	context.ExpectFailure = true
+	context.Arguments.MethodName = propertyTransaction
+	context.Arguments.Payload = `{"saleDate":"2017-06-28T21:57:16","salePrice":"1000","owners":[{"id":"ownership_3","percentage":0.45},{"id":"ownerhip_2","percentage":0.55}]}`
+	context.Arguments.Id = property_1
+	context.Test.ExpectedResponseMessage = cannotUnmarshalStringIntoFloat64
+	context.Arguments.Builder = []string{context.Arguments.Id, context.Arguments.Payload}
+	context.Test.ShouldFailTest = true
+
+	context.Test.ExpectedResponsePayload = ""
 
 	invokePropertyTransaction(context)
-
 }
 
 func TestPropertyTransactionMissingSaleDate(t *testing.T) {
@@ -211,12 +222,14 @@ func TestPropertyTransactionMissingSaleDate(t *testing.T) {
 	stub := getStub()
 
 	context := getTestContext(t, stub)
-	context.MethodName = propertyTransaction
-	context.Payload = `{"salePrice":1000,"owners":[{"id":"ownership_3","percentage":0.45},{"id":"ownership_2","percentage":0.55}]}`
-	context.Id = property_1
-	context.ExpectedResponse = saleDateRequired
-	context.ArgumentBuilder = []string{context.Id, context.Payload}
-	context.ExpectFailure = true
+	context.Arguments.MethodName = propertyTransaction
+	context.Arguments.Payload = `{"salePrice":1000,"owners":[{"id":"ownership_3","percentage":0.45},{"id":"ownership_2","percentage":0.55}]}`
+	context.Arguments.Id = property_1
+	context.Test.ExpectedResponseMessage = saleDateRequired
+	context.Arguments.Builder = []string{context.Arguments.Id, context.Arguments.Payload}
+	context.Test.ShouldFailTest = true
+
+	context.Test.ExpectedResponsePayload = ""
 
 	invokePropertyTransaction(context)
 
@@ -227,15 +240,16 @@ func TestPropertyTransactionNegativeSalePrice(t *testing.T) {
 	stub := getStub()
 
 	context := getTestContext(t, stub)
-	context.MethodName = propertyTransaction
-	context.Payload = `{"saleDate":"2017-06-28T21:57:16","salePrice":-1,"owners":[{"id":"ownership_3","percentage":0.45},{"id":"ownerhip_2","percentage":0.55}]}`
-	context.Id = property_1
-	context.ExpectedResponse = salePriceMustBeGreaterThan0
-	context.ArgumentBuilder = []string{context.Id, context.Payload}
-	context.ExpectFailure = true
+	context.Arguments.MethodName = propertyTransaction
+	context.Arguments.Payload = `{"saleDate":"2017-06-28T21:57:16","salePrice":-1,"owners":[{"id":"ownership_3","percentage":0.45},{"id":"ownerhip_2","percentage":0.55}]}`
+	context.Arguments.Id = property_1
+	context.Test.ExpectedResponseMessage = salePriceMustBeGreaterThan0
+	context.Arguments.Builder = []string{context.Arguments.Id, context.Arguments.Payload}
+	context.Test.ShouldFailTest = true
+
+	context.Test.ExpectedResponsePayload = ""
 
 	invokePropertyTransaction(context)
-
 }
 
 func TestPropertyTransactionNoOwners(t *testing.T) {
@@ -243,15 +257,16 @@ func TestPropertyTransactionNoOwners(t *testing.T) {
 	stub := getStub()
 
 	context := getTestContext(t, stub)
-	context.MethodName = propertyTransaction
-	context.Payload = `{"saleDate":"2017-06-28T21:57:16","salePrice":1000,"owners":[]}`
-	context.Id = property_1
-	context.ExpectedResponse = atLeastOneOwnerIsRequired
-	context.ArgumentBuilder = []string{context.Id, context.Payload}
-	context.ExpectFailure = true
+	context.Arguments.MethodName = propertyTransaction
+	context.Arguments.Payload = `{"saleDate":"2017-06-28T21:57:16","salePrice":1000,"owners":[]}`
+	context.Arguments.Id = property_1
+	context.Test.ExpectedResponseMessage = atLeastOneOwnerIsRequired
+	context.Arguments.Builder = []string{context.Arguments.Id, context.Arguments.Payload}
+	context.Test.ShouldFailTest = true
+
+	context.Test.ExpectedResponsePayload = ""
 
 	invokePropertyTransaction(context)
-
 }
 
 func TestPropertyTransactionTooLowTotalOwnerPercentage(t *testing.T) {
@@ -259,12 +274,14 @@ func TestPropertyTransactionTooLowTotalOwnerPercentage(t *testing.T) {
 	stub := getStub()
 
 	context := getTestContext(t, stub)
-	context.MethodName = propertyTransaction
-	context.Payload = `{"saleDate":"2017-06-28T21:57:16","salePrice":1000,"owners":[{"id":"ownership_3","percentage":0.45},{"id":"ownerhip_2","percentage":0.50}]}`
-	context.Id = property_1
-	context.ExpectedResponse = totalPercentageCanNotBeGreaterThan1
-	context.ArgumentBuilder =[]string{context.Id, context.Payload}
-	context.ExpectFailure = true
+	context.Arguments.MethodName = propertyTransaction
+	context.Arguments.Payload = `{"saleDate":"2017-06-28T21:57:16","salePrice":1000,"owners":[{"id":"ownership_3","percentage":0.45},{"id":"ownerhip_2","percentage":0.50}]}`
+	context.Arguments.Id = property_1
+	context.Test.ExpectedResponseMessage = totalPercentageCanNotBeGreaterThan1
+	context.Arguments.Builder =[]string{context.Arguments.Id, context.Arguments.Payload}
+	context.Test.ShouldFailTest = true
+
+	context.Test.ExpectedResponsePayload = ""
 
 	invokePropertyTransaction(context)
 
@@ -275,15 +292,17 @@ func TestPropertyTransactionTooHighTotalOwnerPercentage(t *testing.T) {
 	stub := getStub()
 
 	context := getTestContext(t, stub)
-	context.MethodName = propertyTransaction
-	context.Payload = `{"saleDate":"2017-06-28T21:57:16","salePrice":1000,"owners":[{"id":"ownership_3","percentage":0.45},{"id":"ownerhip_2","percentage":0.70}]}`
-	context.Id = property_1
-	context.ExpectedResponse = totalPercentageCanNotBeGreaterThan1
-	//context.Arguments = getChainCodeArgs(context.MethodName, context.Id, context.Payload)
-	context.ArgumentBuilder = []string{context.Id, context.Payload}
-	context.Arguments = getChainCodeArgs(context)
+	context.Arguments.MethodName = propertyTransaction
+	context.Arguments.Payload = `{"saleDate":"2017-06-28T21:57:16","salePrice":1000,"owners":[{"id":"ownership_3","percentage":0.45},{"id":"ownerhip_2","percentage":0.70}]}`
+	context.Arguments.Id = property_1
+	context.Arguments.Builder = []string{context.Arguments.Id, context.Arguments.Payload}
 
-	confirmExpectedTestFailure(context)
+	context.Test.ExpectedResponseMessage = totalPercentageCanNotBeGreaterThan1
+	context.Test.ShouldFailTest =true
+
+	context.Test.ExpectedResponsePayload = ""
+
+	invokePropertyTransaction(context)
 
 }
 
@@ -292,28 +311,31 @@ func TestGetProperty(t *testing.T) {
 	stub := getStub()
 
 	context := getTestContext(t, stub)
-	context.MethodName = propertyTransaction
-	context.Id = property_1
+	context.Arguments.MethodName = propertyTransaction
+	context.Arguments.Id = property_1
 
-	context.Attributes = []Attribute{
+	context.Arguments.Attributes = []Attribute{
 		{Id: ownership_1, Percent:0.35},
 		{Id: ownership_3, Percent:0.65}}
 
 	propertyAsString := createProperty(context)
 
-	context.Payload = propertyAsString
-	context.ArgumentBuilder = []string{context.Id, context.Payload}
+	context.Arguments.Payload = propertyAsString
+	context.Arguments.Builder = []string{context.Arguments.Id, context.Arguments.Payload}
+
+	context.Test.ExpectedResponsePayload = ""
 
 	invokePropertyTransaction(context)
 
 	context = getTestContext(t, stub)
-	context.Id = property_1
-	context.MethodName = getProperty
-	context.Payload = propertyAsString
-	context.ArgumentBuilder = []string{context.Id}
-	context.Arguments = getChainCodeArgs(context)
+	context.Arguments.Id = property_1
+	context.Arguments.MethodName = getProperty
+	context.Arguments.Payload = propertyAsString
+	context.Arguments.Builder = []string{context.Arguments.Id}
 
-	confirmExpectedTestSuccess(context)
+	context.Test.ExpectedResponsePayload = context.Arguments.Payload
+
+	invokeGetProperty(context)
 
 }
 
@@ -322,29 +344,15 @@ func TestGetPropertyExtraArgs(t *testing.T) {
 	stub := getStub()
 
 	context := getTestContext(t, stub)
-	context.MethodName = propertyTransaction
-	context.Id = property_1
+	context.Arguments.Id = property_1
+	context.Arguments.MethodName = getProperty
+	context.Arguments.Payload = createProperty(context)
+	context.Arguments.Builder = []string{context.Arguments.Id, context.Arguments.Payload}
 
-	context.Attributes = []Attribute{
-		{Id: ownership_1, Percent:0.35},
-		{Id: ownership_3, Percent:0.65}}
+	context.Test.ExpectedResponseMessage = incorrectNumberOfArgs
+	context.Test.ShouldFailTest = true
 
-	propertyAsString := createProperty(context)
-
-	context.Payload = propertyAsString
-	context.ArgumentBuilder = []string{context.Id, context.Payload}
-
-	invokePropertyTransaction(context)
-
-	context = getTestContext(t, stub)
-	context.Id = property_1
-	context.MethodName = getProperty
-	context.Payload = propertyAsString
-	context.ExpectedResponse = incorrectNumberOfArgs
-	context.ArgumentBuilder = []string{context.Id, context.Payload}
-	context.Arguments = getChainCodeArgs(context)
-
-	confirmExpectedTestFailure(context)
+	invokeGetProperty(context)
 
 }
 
@@ -353,13 +361,14 @@ func TestGetPropertyMissingProperty(t *testing.T) {
 	stub := getStub()
 
 	context := getTestContext(t, stub)
-	context.MethodName = getProperty
-	context.Payload = emptyPropertyJson
-	context.Id = property_1
-	context.ExpectedResponse = incorrectNumberOfArgs
-	context.ArgumentBuilder = []string{context.Id, context.Payload}
-	context.Arguments = getChainCodeArgs(context)
+	context.Arguments.MethodName = getProperty
+	context.Arguments.Payload = emptyPropertyJson
+	context.Arguments.Id = property_1
+	context.Arguments.Builder = []string{context.Arguments.Id, context.Arguments.Payload}
 
-	confirmExpectedTestFailure(context)
+	context.Test.ExpectedResponseMessage = incorrectNumberOfArgs
+	context.Test.ShouldFailTest = true
+
+	invokeGetProperty(context)
 
 }
