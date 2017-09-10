@@ -52,7 +52,7 @@ type SessionContext struct {
 
 }
 
-func createProperty(context SessionContext) (Property, string) {
+func createProperty(context SessionContext) (string) {
 
 	property := Property{}
 	property.PropertyId = context.Id
@@ -62,7 +62,7 @@ func createProperty(context SessionContext) (Property, string) {
 
 	propertyAsBytes, _ := getPropertyAsBytes(property)
 
-	return property, string(propertyAsBytes)
+	return string(propertyAsBytes)
 
 }
 
@@ -80,7 +80,7 @@ func getChainCodeArgs(chainCodeMethodName string, payload ...string) ([][]byte) 
 
 func confirmPropertyTransaction(t *testing.T, stub *shim.MockStub, context SessionContext) {
 
-	_, context.Payload = createProperty(context)
+	context.Payload = createProperty(context)
 
 	invokePropertyTransaction(t, stub, context)
 
