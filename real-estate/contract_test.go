@@ -52,22 +52,22 @@ func TestGetOwnershipExtraArgs(t *testing.T) {
 
 }
 
-func TestOwnershipCreatedDuringPropertyTransaction(t *testing.T) {
-
-	stub := getStub()
-
-	owners := []Attribute{
-		{Id: ownership_1, Percent:0.45},
-		{Id: ownership_2, Percent:0.55}}
-
-	confirmPropertyTransaction(t, stub, owners)
-
-	property := []Attribute{{Id:"1", Percent:0.45, SaleDate:dateString}}
-	ownershipPropertyAsString := getAttributesAsString(property)
-
-	invokeGetOwnership(t, stub, ownership_1, ownershipPropertyAsString)
-
-}
+//func TestOwnershipCreatedDuringPropertyTransaction(t *testing.T) {
+//
+//	stub := getStub()
+//
+//	owners := []Attribute{
+//		{Id: ownership_1, Percent:0.45},
+//		{Id: ownership_2, Percent:0.55}}
+//
+//	confirmPropertyTransaction(t, stub, owners)
+//
+//	property := []Attribute{{Id:"1", Percent:0.45, SaleDate:dateString}}
+//	ownershipPropertyAsString := getAttributesAsString(property)
+//
+//	invokeGetOwnership(t, stub, ownership_1, ownershipPropertyAsString)
+//
+//}
 
 //TODO ========================================================================================================================================================================
 func TestOwnershipCreatedDuringPropertyTransaction2(t *testing.T) {
@@ -84,7 +84,7 @@ func TestOwnershipCreatedDuringPropertyTransaction2(t *testing.T) {
 
 	//confirmPropertyTransaction(t,stub, context.Attributes)
 	confirmPropertyTransaction2(t,stub, context)
-	
+
 	//property := []Attribute{{Id:"1", Percent:0.45, SaleDate:dateString}}
 	//ownershipPropertyAsString := getAttributesAsString(property)
 	//
@@ -116,7 +116,7 @@ func TestPropertyTransaction(t *testing.T) {
 		{Id: ownership_1, Percent:0.45},
 		{Id: ownership_2, Percent:0.55}}
 
-	context.Payload = ""
+	//context.Payload = ""
 
 	//confirmPropertyTransaction(t, stub, owners)
 	confirmPropertyTransaction2(t, stub, context)
@@ -138,37 +138,109 @@ func TestMultiplePropertyTransactions(t *testing.T) {
 
 	stub := getStub()
 
-	owners := []Attribute{
+	context := SessionContext{}
+	context.MethodName = propertyTransaction
+	context.Id = property_1
+
+	//owners := []Attribute{
+	//	{Id: ownership_1, Percent:0.45},
+	//	{Id: ownership_2, Percent:0.55}}
+
+	context.Attributes = []Attribute{
 		{Id: ownership_1, Percent:0.45},
 		{Id: ownership_2, Percent:0.55}}
 
-	confirmPropertyTransaction(t, stub, owners)
+	//confirmPropertyTransaction(t, stub, owners)
+	confirmPropertyTransaction2(t, stub, context)
 
-	owners = []Attribute{
+	context = SessionContext{}
+	context.MethodName = propertyTransaction
+	context.Id = property_1
+
+	//owners = []Attribute{
+	//	{Id: ownership_3, Percent:0.35},
+	//	{Id: ownership_4, Percent:0.65}}
+
+	context.Attributes = []Attribute{
 		{Id: ownership_3, Percent:0.35},
 		{Id: ownership_4, Percent:0.65}}
 
-	confirmPropertyTransaction(t, stub, owners)
+	//confirmPropertyTransaction(t, stub, owners)
+	confirmPropertyTransaction2(t, stub, context)
 
 }
+
+//func TestMultiplePropertyTransactions(t *testing.T) {
+//
+//	stub := getStub()
+//
+//	owners := []Attribute{
+//		{Id: ownership_1, Percent:0.45},
+//		{Id: ownership_2, Percent:0.55}}
+//
+//	confirmPropertyTransaction(t, stub, owners)
+//
+//	owners = []Attribute{
+//		{Id: ownership_3, Percent:0.35},
+//		{Id: ownership_4, Percent:0.65}}
+//
+//	confirmPropertyTransaction(t, stub, owners)
+//
+//}
 
 func TestMultiplePropertyTransactionsWithRepeatOwners(t *testing.T) {
 
 	stub := getStub()
 
-	owners := []Attribute{
-		{Id: ownership_1, Percent:0.45},
-		{Id: ownership_2, Percent:0.55}}
+	context := SessionContext{}
+	context.MethodName = propertyTransaction
+	context.Id = property_1
 
-	confirmPropertyTransaction(t, stub, owners)
+	//owners := []Attribute{
+	//	{Id: ownership_1, Percent:0.45},
+	//	{Id: ownership_2, Percent:0.55}}
 
-	owners = []Attribute{
+	context.Attributes = []Attribute{
+			{Id: ownership_1, Percent:0.45},
+			{Id: ownership_2, Percent:0.55}}
+
+	//confirmPropertyTransaction(t, stub, owners)
+	confirmPropertyTransaction2(t, stub, context)
+
+	context = SessionContext{}
+	context.MethodName = propertyTransaction
+	context.Id = property_1
+
+	//owners = []Attribute{
+	//	{Id: ownership_1, Percent:0.35},
+	//	{Id: ownership_3, Percent:0.65}}
+
+	context.Attributes = []Attribute{
 		{Id: ownership_1, Percent:0.35},
 		{Id: ownership_3, Percent:0.65}}
 
-	confirmPropertyTransaction(t, stub, owners)
+	//confirmPropertyTransaction(t, stub, owners)
+	confirmPropertyTransaction2(t, stub, context)
 
 }
+
+//func TestMultiplePropertyTransactionsWithRepeatOwners(t *testing.T) {
+//
+//	stub := getStub()
+//
+//	owners := []Attribute{
+//		{Id: ownership_1, Percent:0.45},
+//		{Id: ownership_2, Percent:0.55}}
+//
+//	confirmPropertyTransaction(t, stub, owners)
+//
+//	owners = []Attribute{
+//		{Id: ownership_1, Percent:0.35},
+//		{Id: ownership_3, Percent:0.65}}
+//
+//	confirmPropertyTransaction(t, stub, owners)
+//
+//}
 
 func TestPropertyTransactionExtraArgs(t *testing.T) {
 
