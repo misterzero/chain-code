@@ -27,7 +27,6 @@ const salePrice = 125000
 
 const incorrectNumberOfArgs = "Incorrect number of arguments: "
 const nilValueForOwnershipId = "Nil value for ownershipId:"
-const nilAmountFor = "Nil amount for"
 const cannotUnmarshalStringIntoFloat64 = "cannot unmarshal string into Go struct field Property.salePrice of type float64"
 const saleDateRequired = "A sale date is required."
 const salePriceMustBeGreaterThan0 = "The sale price must be greater than 0"
@@ -39,6 +38,21 @@ const responseMessageStart = "{response.Message="
 const responseStatusStart = "{response.Status="
 const responsePayloadStart = "{response.Payload="
 
+type SessionContext struct {
+
+	MethodName         string
+	Payload            string
+	Arguments          [][]byte
+	Id                 string
+	Attributes         []Attribute
+	TestFailureMessage string
+	ExpectedStatus     int32
+	ExpectedResponse   string
+	Response           peer.Response
+
+}
+
+//TODO set this up to accept only context
 func createProperty(propertyId string, owners []Attribute) (Property, string) {
 
 	property := Property{}
@@ -53,12 +67,28 @@ func createProperty(propertyId string, owners []Attribute) (Property, string) {
 
 }
 
-func getChainCodeArgs(chainCodeMethodName string, payload ...string) ([][]byte){
+func createProperty2(context SessionContext) (Property, string) {
+
+	property := Property{}
+	property.PropertyId = context.Id
+	property.SaleDate = dateString
+	property.SalePrice = salePrice
+	property.Owners = context.Attributes
+
+	propertyAsBytes, _ := getPropertyAsBytes(property)
+
+	return property, string(propertyAsBytes)
+
+}
+
+//TODO convert to use just the context object as parameter
+func getChainCodeArgs(chainCodeMethodName string, payload ...string) ([][]byte) {
 
 	args := [][]byte{[]byte(chainCodeMethodName), []byte(chainCodeMethodName)}
 	for i := 0; i < len(payload); i++ {
 		args = append(args, []byte(payload[i]))
 	}
+
 	return args
 
 }
@@ -68,19 +98,45 @@ func confirmPropertyTransaction(t *testing.T, stub *shim.MockStub, owners []Attr
 	property, propertyString := createProperty(property_1, owners)
 
 	invokePropertyTransaction(t, stub, property.PropertyId, propertyString)
-	invokeGetProperty(t, stub, property, propertyString)
+	invokeGetProperty(t, stub, property.PropertyId, propertyString)
 
 }
 
-func invokeGetProperty(t *testing.T, stub *shim.MockStub, property Property, propertyString string){
+//TODO working
+func confirmPropertyTransaction2(t *testing.T, stub *shim.MockStub, context SessionContext) {
 
-	args := getChainCodeArgs(getProperty, property.PropertyId)
+	//property, propertyString := createProperty(context.MethodName, context.Attributes)
+	//_, context.Payload = createProperty(context.MethodName, context.Attributes)
+	_, context.Payload = createProperty2(context)
+
+	//invokePropertyTransaction(t, stub, context.Id, context.Payload)
+	invokePropertyTransaction2(t, stub, context)
+
+	//invokeGetProperty(t, stub, context.Id, context.Payload)
+	context.MethodName = getProperty
+	invokeGetProperty2(t, stub, context)
+
+}
+
+func invokeGetProperty(t *testing.T, stub *shim.MockStub, propertyId, propertyString string) {
+
+	args := getChainCodeArgs(getProperty, propertyId)
 
 	handleExpectedSuccess(t, stub, getProperty, args, propertyString)
 
 }
 
-func invokeGetOwnership(t *testing.T, stub *shim.MockStub,ownershipId string, payload string){
+func invokeGetProperty2(t *testing.T, stub *shim.MockStub, context SessionContext) {
+
+	//args := getChainCodeArgs(context.MethodName, context.Id)
+	context.Arguments = getChainCodeArgs(context.MethodName, context.Id)
+
+	//handleExpectedSuccess(t, stub, getProperty, args, propertyString)
+	handleExpectedSuccess2(t, stub, context)
+
+}
+
+func invokeGetOwnership(t *testing.T, stub *shim.MockStub, ownershipId string, payload string) {
 
 	args := getChainCodeArgs(getOwnership, ownershipId)
 
@@ -88,80 +144,156 @@ func invokeGetOwnership(t *testing.T, stub *shim.MockStub,ownershipId string, pa
 
 }
 
-func invokePropertyTransaction(t *testing.T, stub *shim.MockStub, propertyId string, payload string ){
+func invokeGetOwnership2(t *testing.T, stub *shim.MockStub, context SessionContext) {
+
+	context.Arguments = getChainCodeArgs(context.MethodName, context.Id)
+
+	//handleExpectedSuccess(t, stub, context.MethodName, args, payload)
+	handleExpectedSuccess2(t, stub, context)
+
+}
+
+func invokePropertyTransaction(t *testing.T, stub *shim.MockStub, propertyId string, payload string ) {
 
 	args := getChainCodeArgs(propertyTransaction, propertyId, payload)
-
 	handleExpectedSuccess(t, stub, propertyTransaction, args, "")
 
 }
 
-func handleExpectedSuccess(t *testing.T, stub *shim.MockStub, argument string, args [][]byte, payload string){
+func invokePropertyTransaction2(t *testing.T, stub *shim.MockStub, context SessionContext) {
+
+	//args := getChainCodeArgs(propertyTransaction, propertyId, payload)
+	//args := getChainCodeArgs(context.MethodName, context.Id, context.Payload)
+	context.Arguments = getChainCodeArgs(context.MethodName, context.Id, context.Payload)
+
+	//handleExpectedSuccess(t, stub, propertyTransaction, args, "")
+	context.Payload = ""
+	//handleExpectedSuccess(t, stub, context.MethodName, context.Arguments, "")
+	//handleExpectedSuccess(t, stub, context.MethodName, context.Arguments, context.Payload)
+	handleExpectedSuccess2(t, stub, context)
+
+}
+
+
+//TODO less parameters
+func handleExpectedSuccess(t *testing.T, stub *shim.MockStub, argument string, args [][]byte, payload string) {
 
 	response := stub.MockInvoke(argument, args)
+
+	fmt.Println("Response: ", response)
 
 	failureMessage := failureMessageStart + argument + ", " + payload + "}, "
 
 	verifyExpectedResponseStatus(t, response, failureMessage, shim.OK)
-	verifyExpectedInvalidPayload(t, response, failureMessage, payload)
+	verifyNotExpectedPayload(t, response, failureMessage, payload)
 
 }
 
-func handleExpectedFailures(t *testing.T, stub *shim.MockStub, args [][]byte, payload string, argument string, expectedResponseMessage string){
+func handleExpectedSuccess2(t *testing.T, stub *shim.MockStub, context SessionContext) {
 
-	response := stub.MockInvoke(argument, args)
+	//response := stub.MockInvoke(argument, args)
+	//response := stub.MockInvoke(context.MethodName, context.Arguments)
+	context.Response = stub.MockInvoke(context.MethodName, context.Arguments)
 
-	failureMessage := failureMessageStart + argument + ", " + payload + "}, "
+	context.TestFailureMessage = failureMessageStart + context.MethodName + ", " + context.Payload + "}, "
 
-	verifyExpectedResponseStatus(t, response, failureMessage, shim.ERROR)
-	verifyExpectedResponseMessage(t, response, failureMessage, expectedResponseMessage)
-	verifyExpectedValidPayload(t, response, failureMessage, payload)
+	//verifyExpectedResponseStatus(t, response, failureMessage, shim.OK)
+	//verifyExpectedResponseStatus(t, context.Response, failureMessage, shim.OK)
+	//verifyExpectedResponseStatus(t, context.Response, context.TestFailureMessage, shim.OK)
+	context.ExpectedStatus = shim.OK
+	verifyExpectedResponseStatus2(t, context)
+
+	//verifyNotExpectedPayload(t, response, failureMessage, context.Payload)
+	//verifyNotExpectedPayload(t, context.Response, failureMessage, context.Payload)
+	//verifyNotExpectedPayload(t, context.Response, context.TestFailureMessage, context.Payload)
+	verifyNotExpectedPayload2(t, context)
 
 }
 
+func handleExpectedFailures(t *testing.T, stub *shim.MockStub, context SessionContext) {
+
+	context.Response = stub.MockInvoke(context.MethodName, context.Arguments)
+	context.TestFailureMessage = failureMessageStart + context.MethodName + ", " + context.Payload + "}, "
+	context.ExpectedStatus = shim.ERROR
+
+	verifyExpectedResponseStatus2(t, context)
+	verifyExpectedResponseMessage2(t, context)
+	verifyExpectedPayload2(t, context)
+
+}
+//TODO less parameters
 func verifyExpectedResponseStatus(t *testing.T, response peer.Response, failureMessage string, statusValue int32) {
 
 	if response.Status != statusValue {
 		failureMessage += responseStatusStart + strconv.FormatInt(int64(response.Status), 10) + "}]"
-		displayFailure(t, failureMessage)
+		displayTestFailure(t, failureMessage)
 	}
 
 }
 
-func verifyExpectedResponseMessage(t *testing.T, response peer.Response, failureMessage string, expectedResponseMessage string) {
+func verifyExpectedResponseStatus2(t *testing.T, context SessionContext) {
 
-	if !strings.Contains(response.Message, expectedResponseMessage) {
-		failureMessage += responseMessageStart + string(response.Message) + "}]"
-		displayFailure(t, failureMessage)
+	if context.Response.Status != context.ExpectedStatus{
+		context.TestFailureMessage += responseStatusStart + strconv.FormatInt(int64(context.Response.Status), 10) + "}]"
+		displayTestFailure(t, context.TestFailureMessage)
 	}
 
 }
 
-func verifyExpectedValidPayload(t *testing.T, response peer.Response, failureMessage string, payload string) {
+func verifyExpectedResponseMessage2(t *testing.T, context SessionContext) {
 
-	if string(response.Payload) == payload {
-		failureMessage += responsePayloadStart + string(response.Payload) + "}]"
-		displayFailure(t, failureMessage)
+	verifyExpectedResponseMessageSet2(t, context)
+
+	if !strings.Contains(context.Response.Message, context.ExpectedResponse) {
+		context.TestFailureMessage += responseMessageStart + string(context.Response.Message) + "}]"
+		displayTestFailure(t, context.TestFailureMessage)
 	}
 
 }
 
-func verifyExpectedInvalidPayload(t *testing.T, response peer.Response, failureMessage string, payload string) {
+func verifyExpectedResponseMessageSet2(t *testing.T, context SessionContext) {
+	if len(context.ExpectedResponse) == 0 {
+		failureMessage := "ExpectedResponse is empty in Context"
+		displayTestFailure(t, failureMessage)
+	}
+}
+
+func verifyExpectedPayload2(t *testing.T, context SessionContext) {
+
+	if string(context.Response.Payload) == context.Payload {
+		context.TestFailureMessage += responsePayloadStart + string(context.Response.Payload) + "}]"
+		displayTestFailure(t, context.TestFailureMessage)
+	}
+
+}
+
+//TODO less parameters
+//TODO needs new name
+func verifyNotExpectedPayload(t *testing.T, response peer.Response, failureMessage string, payload string) {
 
 	if string(response.Payload) != payload {
 		failureMessage += responsePayloadStart + string(response.Payload) + "}]"
-		displayFailure(t, failureMessage)
+		displayTestFailure(t, failureMessage)
 	}
 
 }
 
-func displayFailure(t *testing.T, failureMessage string) {
+func verifyNotExpectedPayload2(t *testing.T, context SessionContext) {
+
+	if string(context.Response.Payload) != context.Payload {
+		context.TestFailureMessage += responsePayloadStart + string(context.Response.Payload) + "}]"
+		displayTestFailure(t, context.TestFailureMessage)
+	}
+
+}
+
+func displayTestFailure(t *testing.T, failureMessage string) {
 	fmt.Println(failureMessage)
 	t.FailNow()
 
 }
 
-func getStub() (*shim.MockStub){
+func getStub() (*shim.MockStub) {
 
 	scc := new(Chaincode)
 	stub := shim.NewMockStub("contract", scc)
@@ -170,7 +302,7 @@ func getStub() (*shim.MockStub){
 
 }
 
-func getAttributesAsString(attributes []Attribute) string{
+func getAttributesAsString(attributes []Attribute) (string) {
 
 	var buffer bytes.Buffer
 
@@ -193,7 +325,7 @@ func getAttributesAsString(attributes []Attribute) string{
 
 }
 
-func getAttributeAsString(attribute Attribute) (string, error){
+func getAttributeAsString(attribute Attribute) (string, error) {
 
 	var attributeBytes []byte
 	var err error

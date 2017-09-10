@@ -20,30 +20,39 @@ import (
 	"testing"
 )
 
-//TODO code needs to be refactored to deal with the name field of Attribute better
-func TestGetOwnershipMissingOwnership(t *testing.T){
+// TODO reduce parameters for invokePropertyTransaction
+// TODO make context class level var that will be reused
+// TODO the context should not be updated as it is passed around, just used ... refactor opportunity
+func TestGetOwnershipMissingOwnership(t *testing.T) {
 
 	stub := getStub()
 
-	payload := ownership_1
-	args := getChainCodeArgs(getOwnership, ownership_1)
+	context := SessionContext{}
+	context.MethodName = getOwnership
+	context.Payload = ownership_1
+	context.Arguments = getChainCodeArgs(context.MethodName, context.Payload)
+	context.ExpectedResponse = nilValueForOwnershipId
 
-	handleExpectedFailures(t, stub, args, payload, getOwnership, nilValueForOwnershipId)
+	handleExpectedFailures(t, stub, context)
 
 }
 
-func TestGetOwnershipExtraArgs(t *testing.T){
+func TestGetOwnershipExtraArgs(t *testing.T) {
 
 	stub := getStub()
 
-	payload := invalidArgument
-	args := getChainCodeArgs(getOwnership, ownership_1, payload)
+	context := SessionContext{}
+	context.MethodName = getOwnership
+	context.Payload = invalidArgument
+	context.Id = ownership_1
+	context.Arguments = getChainCodeArgs(context.MethodName, context.Id, context.Payload)
+	context.ExpectedResponse = incorrectNumberOfArgs
 
-	handleExpectedFailures(t, stub, args, invalidArgument, getOwnership, incorrectNumberOfArgs)
+	handleExpectedFailures(t, stub, context)
 
 }
 
-func TestOwnershipCreatedDuringPropertyTransaction(t *testing.T){
+func TestOwnershipCreatedDuringPropertyTransaction(t *testing.T) {
 
 	stub := getStub()
 
@@ -60,19 +69,72 @@ func TestOwnershipCreatedDuringPropertyTransaction(t *testing.T){
 
 }
 
-func TestPropertyTransaction(t *testing.T){
+//TODO ========================================================================================================================================================================
+func TestOwnershipCreatedDuringPropertyTransaction2(t *testing.T) {
 
 	stub := getStub()
 
-	owners := []Attribute{
+	context := SessionContext{}
+	context.MethodName = propertyTransaction
+	context.Id = property_1
+
+	context.Attributes = []Attribute{
 		{Id: ownership_1, Percent:0.45},
 		{Id: ownership_2, Percent:0.55}}
 
-	confirmPropertyTransaction(t, stub, owners)
+	//confirmPropertyTransaction(t,stub, context.Attributes)
+	confirmPropertyTransaction2(t,stub, context)
+	
+	//property := []Attribute{{Id:"1", Percent:0.45, SaleDate:dateString}}
+	//ownershipPropertyAsString := getAttributesAsString(property)
+	//
+	//invokeGetOwnership(t, stub, ownership_1, ownershipPropertyAsString)
+
+	context = SessionContext{}
+	context.MethodName = getOwnership
+	context.Id = ownership_1
+
+	property := []Attribute{{Id:"1", Percent:0.45, SaleDate:dateString}}
+	//ownershipPropertyAsString := getAttributesAsString(property)
+	context.Payload = getAttributesAsString(property)
+
+
+	//invokeGetOwnership(t, stub, ownership_1, ownershipPropertyAsString)
+	invokeGetOwnership2(t, stub, context)
 
 }
 
-func TestMultiplePropertyTransactions(t *testing.T){
+func TestPropertyTransaction(t *testing.T) {
+
+	stub := getStub()
+
+	context := SessionContext{}
+	context.MethodName = propertyTransaction
+	context.Id = property_1
+
+	context.Attributes = []Attribute{
+		{Id: ownership_1, Percent:0.45},
+		{Id: ownership_2, Percent:0.55}}
+
+	context.Payload = ""
+
+	//confirmPropertyTransaction(t, stub, owners)
+	confirmPropertyTransaction2(t, stub, context)
+}
+
+//func TestPropertyTransaction(t *testing.T) {
+//
+//	stub := getStub()
+//
+//	owners := []Attribute{
+//		{Id: ownership_1, Percent:0.45},
+//		{Id: ownership_2, Percent:0.55}}
+//
+//	confirmPropertyTransaction(t, stub, owners)
+//
+//}
+
+func TestMultiplePropertyTransactions(t *testing.T) {
 
 	stub := getStub()
 
@@ -90,7 +152,7 @@ func TestMultiplePropertyTransactions(t *testing.T){
 
 }
 
-func TestMultiplePropertyTransactionsWithRepeatOwners(t *testing.T){
+func TestMultiplePropertyTransactionsWithRepeatOwners(t *testing.T) {
 
 	stub := getStub()
 
@@ -118,9 +180,14 @@ func TestPropertyTransactionExtraArgs(t *testing.T) {
 
 	_, propertyAsString := createProperty(property_1, owners)
 
-	args := getChainCodeArgs(getOwnership, property_1, propertyAsString, "extraArg")
+	context := SessionContext{}
+	context.MethodName = getOwnership
+	context.Payload = propertyAsString
+	context.Id = property_1
+	context.Arguments = getChainCodeArgs(context.MethodName, context.Id, context.Payload, "extraArgs")
+	context.ExpectedResponse = incorrectNumberOfArgs
 
-	handleExpectedFailures(t, stub, args, propertyAsString, propertyTransaction, incorrectNumberOfArgs)
+	handleExpectedFailures(t, stub, context)
 
 }
 
@@ -129,9 +196,15 @@ func TestPropertyTransactionStringAsSalePrice(t *testing.T) {
 	stub := getStub()
 
 	stringAsSalePrice := `{"saleDate":"2017-06-28T21:57:16","salePrice":"1000","owners":[{"id":"ownership_3","percentage":0.45},{"id":"ownerhip_2","percentage":0.55}]}`
-	args := getChainCodeArgs(propertyTransaction, property_1, stringAsSalePrice)
 
-	handleExpectedFailures(t, stub, args, stringAsSalePrice, propertyTransaction, cannotUnmarshalStringIntoFloat64)
+	context := SessionContext{}
+	context.MethodName = propertyTransaction
+	context.Payload = stringAsSalePrice
+	context.Id = property_1
+	context.ExpectedResponse = cannotUnmarshalStringIntoFloat64
+	context.Arguments = getChainCodeArgs(context.MethodName, context.Id, context.Payload)
+
+	handleExpectedFailures(t, stub, context)
 
 }
 
@@ -140,9 +213,15 @@ func TestPropertyTransactionMissingSaleDate(t *testing.T) {
 	stub := getStub()
 
 	missingSaleDate := `{"salePrice":1000,"owners":[{"id":"ownership_3","percentage":0.45},{"id":"ownership_2","percentage":0.55}]}`
-	args := getChainCodeArgs(propertyTransaction, property_1, missingSaleDate)
 
-	handleExpectedFailures(t, stub, args, missingSaleDate, propertyTransaction, saleDateRequired)
+	context := SessionContext{}
+	context.MethodName = propertyTransaction
+	context.Payload = missingSaleDate
+	context.Id = property_1
+	context.ExpectedResponse = saleDateRequired
+	context.Arguments = getChainCodeArgs(context.MethodName, context.Id, context.Payload)
+
+	handleExpectedFailures(t, stub, context)
 
 }
 
@@ -151,9 +230,15 @@ func TestPropertyTransactionNegativeSalePrice(t *testing.T) {
 	stub := getStub()
 
 	negativeSalePrice := `{"saleDate":"2017-06-28T21:57:16","salePrice":-1,"owners":[{"id":"ownership_3","percentage":0.45},{"id":"ownerhip_2","percentage":0.55}]}`
-	args := getChainCodeArgs(propertyTransaction, property_1, negativeSalePrice)
 
-	handleExpectedFailures(t, stub, args, negativeSalePrice, propertyTransaction, salePriceMustBeGreaterThan0)
+	context := SessionContext{}
+	context.MethodName = propertyTransaction
+	context.Payload = negativeSalePrice
+	context.Id = property_1
+	context.ExpectedResponse = salePriceMustBeGreaterThan0
+	context.Arguments = getChainCodeArgs(context.MethodName, context.Id, context.Payload)
+
+	handleExpectedFailures(t, stub, context)
 
 }
 
@@ -162,9 +247,15 @@ func TestPropertyTransactionNoOwners(t *testing.T) {
 	stub := getStub()
 
 	noOwners := `{"saleDate":"2017-06-28T21:57:16","salePrice":1000,"owners":[]}`
-	args := getChainCodeArgs(propertyTransaction, property_1, noOwners)
 
-	handleExpectedFailures(t, stub, args, noOwners, propertyTransaction, atLeastOneOwnerIsRequired)
+	context := SessionContext{}
+	context.MethodName = propertyTransaction
+	context.Payload = noOwners
+	context.Id = property_1
+	context.ExpectedResponse = atLeastOneOwnerIsRequired
+	context.Arguments = getChainCodeArgs(context.MethodName, context.Id, context.Payload)
+
+	handleExpectedFailures(t, stub, context)
 
 }
 
@@ -173,9 +264,15 @@ func TestPropertyTransactionTooLowTotalOwnerPercentage(t *testing.T) {
 	stub := getStub()
 
 	tooLowOwnerPercentage := `{"saleDate":"2017-06-28T21:57:16","salePrice":1000,"owners":[{"id":"ownership_3","percentage":0.45},{"id":"ownerhip_2","percentage":0.50}]}`
-	args := getChainCodeArgs(propertyTransaction, property_1, tooLowOwnerPercentage)
 
-	handleExpectedFailures(t, stub, args, tooLowOwnerPercentage, propertyTransaction, totalPercentageCanNotBeGreaterThan1)
+	context := SessionContext{}
+	context.MethodName = propertyTransaction
+	context.Payload = tooLowOwnerPercentage
+	context.Id = property_1
+	context.ExpectedResponse = totalPercentageCanNotBeGreaterThan1
+	context.Arguments = getChainCodeArgs(context.MethodName, context.Id, context.Payload)
+
+	handleExpectedFailures(t, stub, context)
 
 }
 
@@ -184,13 +281,19 @@ func TestPropertyTransactionTooHighTotalOwnerPercentage(t *testing.T) {
 	stub := getStub()
 
 	tooHighOwnerPercentage := `{"saleDate":"2017-06-28T21:57:16","salePrice":1000,"owners":[{"id":"ownership_3","percentage":0.45},{"id":"ownerhip_2","percentage":0.70}]}`
-	args := getChainCodeArgs(propertyTransaction, property_1, tooHighOwnerPercentage)
 
-	handleExpectedFailures(t, stub, args, tooHighOwnerPercentage, propertyTransaction, totalPercentageCanNotBeGreaterThan1)
+	context := SessionContext{}
+	context.MethodName = propertyTransaction
+	context.Payload = tooHighOwnerPercentage
+	context.Id = property_1
+	context.ExpectedResponse = totalPercentageCanNotBeGreaterThan1
+	context.Arguments = getChainCodeArgs(context.MethodName, context.Id, context.Payload)
+
+	handleExpectedFailures(t, stub, context)
 
 }
 
-func TestGetProperty(t *testing.T){
+func TestGetProperty(t *testing.T) {
 
 	stub := getStub()
 
@@ -201,11 +304,11 @@ func TestGetProperty(t *testing.T){
 	property, propertyString := createProperty(property_1, owners)
 
 	invokePropertyTransaction(t, stub, property.PropertyId, propertyString)
-	invokeGetProperty(t, stub, property, propertyString)
+	invokeGetProperty(t, stub, property.PropertyId, propertyString)
 
 }
 
-func TestGetPropertyExtraArgs(t *testing.T){
+func TestGetPropertyExtraArgs(t *testing.T) {
 
 	stub := getStub()
 
@@ -217,18 +320,28 @@ func TestGetPropertyExtraArgs(t *testing.T){
 
 	invokePropertyTransaction(t, stub, property.PropertyId, propertyString)
 
-	args := getChainCodeArgs(getProperty, property.PropertyId, propertyString)
+	context := SessionContext{}
+	context.MethodName = getProperty
+	context.Payload = propertyString
+	context.Id = property_1
+	context.ExpectedResponse = incorrectNumberOfArgs
+	context.Arguments = getChainCodeArgs(context.MethodName, context.Id, context.Payload)
 
-	handleExpectedFailures(t, stub, args, propertyString, getProperty, incorrectNumberOfArgs)
+	handleExpectedFailures(t, stub, context)
 
 }
 
-func TestGetPropertyMissingProperty(t *testing.T){
+func TestGetPropertyMissingProperty(t *testing.T) {
 
 	stub := getStub()
 
-	args := getChainCodeArgs(getProperty, property_1)
+	context := SessionContext{}
+	context.MethodName = getProperty
+	context.Payload = emptyPropertyJson
+	context.Id = property_1
+	context.ExpectedResponse = incorrectNumberOfArgs
+	context.Arguments = getChainCodeArgs(context.MethodName, context.Id, context.Payload)
 
-	handleExpectedFailures(t, stub, args, emptyPropertyJson, getProperty, nilAmountFor)
+	handleExpectedFailures(t, stub, context)
 
 }
