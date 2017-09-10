@@ -52,7 +52,9 @@ type TestContext struct {
 	TestFailureMessage string
 	ExpectedStatus     int32
 	ExpectedResponse   string
+	ExpectFailure	   bool
 	Response           peer.Response
+
 
 }
 
@@ -70,21 +72,7 @@ func createProperty(context TestContext) (string) {
 
 }
 
-//TODO convert to use just the context object as parameter
-func getChainCodeArgs(chainCodeMethodName string, payload ...string) ([][]byte) {
-
-	fmt.Println("payloadLength: ", len(payload))
-
-	args := [][]byte{[]byte(chainCodeMethodName), []byte(chainCodeMethodName)}
-	for i := 0; i < len(payload); i++ {
-		args = append(args, []byte(payload[i]))
-	}
-
-	return args
-
-}
-
-func getChainCodeArgs2(context TestContext) ([][]byte) {
+func getChainCodeArgs(context TestContext) ([][]byte) {
 
 	fmt.Println("payloadLength: ", len(context.ArgumentBuilder))
 
@@ -97,66 +85,35 @@ func getChainCodeArgs2(context TestContext) ([][]byte) {
 
 }
 
-func confirmPropertyTransaction(context TestContext) {
+//TODO this needs some work
+func invokePropertyTransaction(context TestContext){
 
-	context.Payload = createProperty(context)
+	context.Arguments = getChainCodeArgs(context)
 
-	//fmt.Println("context.Payload1.2: ", context.Payload)
+	if context.ExpectFailure {
+		confirmExpectedTestFailure(context)
+	}else {
 
-	invokePropertyTransaction(context)
+		//TODO this is hacky and needs to be fixed
+		context.Payload = ""
 
-	context.MethodName = getProperty
-
-	fmt.Println("made it here")
-
-	invokeGetProperty(context)
-
-}
-
-func invokeGetProperty(context TestContext) {
-
-	//context.Arguments = getChainCodeArgs(context.MethodName, context.Id)
-	context.Arguments = getChainCodeArgs2(context)
-
-	handleExpectedSuccess(context)
+		confirmExpectedTestSuccess(context)
+	}
 
 }
 
-func invokeGetOwnership(context TestContext) {
-
-	//context.Arguments = getChainCodeArgs(context.MethodName, context.Id)
-	context.Arguments = getChainCodeArgs2(context)
-
-	handleExpectedSuccess(context)
-
-}
-
-func invokePropertyTransaction(context TestContext) {
-
-	//context.Arguments = getChainCodeArgs(context.MethodName, context.Id, context.Payload)
-	context.Arguments = getChainCodeArgs2(context)
-
-	context.Payload = ""
-
-	handleExpectedSuccess(context)
-
-}
-
-func handleExpectedSuccess(context TestContext) {
+func confirmExpectedTestSuccess(context TestContext) {
 
 	context.Response = context.Stub.MockInvoke(context.MethodName, context.Arguments)
-	fmt.Println("Response: ", context.Response)
-
 	context.TestFailureMessage = failureMessageStart + context.MethodName + ", " + context.Payload + "}, "
-
 	context.ExpectedStatus = shim.OK
-	verifyExpectedResponseStatus(context)
 
+	verifyExpectedResponseStatus(context)
 	verifyNotExpectedPayload(context)
 
 }
 
-func handleExpectedFailures(context TestContext) {
+func confirmExpectedTestFailure(context TestContext) {
 
 	context.Response = context.Stub.MockInvoke(context.MethodName, context.Arguments)
 	context.TestFailureMessage = failureMessageStart + context.MethodName + ", " + context.Payload + "}, "

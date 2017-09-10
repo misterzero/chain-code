@@ -30,11 +30,11 @@ func TestGetOwnershipMissingOwnership(t *testing.T) {
 	context.Payload = ownership_1
 	//context.Arguments = getChainCodeArgs(context.MethodName, context.Payload)
 	context.ArgumentBuilder = []string{context.Payload}
-	context.Arguments = getChainCodeArgs2(context)
+	context.Arguments = getChainCodeArgs(context)
 	//context.Arguments = getChainCodeArgs(context.MethodName, context.Payload)
 	context.ExpectedResponse = nilValueForOwnershipId
 
-	handleExpectedFailures(context)
+	confirmExpectedTestFailure(context)
 
 }
 
@@ -48,10 +48,10 @@ func TestGetOwnershipExtraArgs(t *testing.T) {
 	context.Id = ownership_1
 	//context.Arguments = getChainCodeArgs(context.MethodName, context.Id, context.Payload)
 	context.ArgumentBuilder = []string{context.Id, context.Payload}
-	context.Arguments = getChainCodeArgs2(context)
+	context.Arguments = getChainCodeArgs(context)
 	context.ExpectedResponse = incorrectNumberOfArgs
 
-	handleExpectedFailures(context)
+	confirmExpectedTestFailure(context)
 
 }
 
@@ -70,11 +70,7 @@ func TestOwnershipCreatedDuringPropertyTransaction(t *testing.T) {
 	context.Payload = createProperty(context)
 	context.ArgumentBuilder = []string{context.Id, context.Payload}
 
-	context.Arguments = getChainCodeArgs2(context)
-
-	context.Payload = ""
-
-	handleExpectedSuccess(context)
+	invokePropertyTransaction(context)
 
 	context = getTestContext(t, stub)
 	context.Id = ownership_1
@@ -84,9 +80,9 @@ func TestOwnershipCreatedDuringPropertyTransaction(t *testing.T) {
 	context.Payload = getAttributesAsString(property)
 
 	context.ArgumentBuilder = []string{context.Id}
-	context.Arguments = getChainCodeArgs2(context)
+	context.Arguments = getChainCodeArgs(context)
 
-	handleExpectedSuccess(context)
+	confirmExpectedTestSuccess(context)
 
 }
 
@@ -104,12 +100,9 @@ func TestPropertyTransaction(t *testing.T) {
 
 	context.Payload = createProperty(context)
 	context.ArgumentBuilder = []string{context.Id, context.Payload}
-	context.Arguments = getChainCodeArgs2(context)
 
-	//TODO this is hacky and needs to be fixed
-	context.Payload = ""
+	invokePropertyTransaction(context)
 
-	handleExpectedSuccess(context)
 }
 
 func TestMultiplePropertyTransactions(t *testing.T) {
@@ -124,15 +117,10 @@ func TestMultiplePropertyTransactions(t *testing.T) {
 		{Id: ownership_1, Percent:0.45},
 		{Id: ownership_2, Percent:0.55}}
 
-	//confirmPropertyTransaction(context)
 	context.Payload = createProperty(context)
 	context.ArgumentBuilder = []string{context.Id, context.Payload}
-	context.Arguments = getChainCodeArgs2(context)
 
-	//TODO this is hacky and needs to be fixed
-	context.Payload = ""
-
-	handleExpectedSuccess(context)
+	invokePropertyTransaction(context)
 
 	context = getTestContext(t, stub)
 	context.MethodName = propertyTransaction
@@ -142,15 +130,10 @@ func TestMultiplePropertyTransactions(t *testing.T) {
 		{Id: ownership_3, Percent:0.35},
 		{Id: ownership_4, Percent:0.65}}
 
-	//confirmPropertyTransaction(context)
 	context.Payload = createProperty(context)
 	context.ArgumentBuilder = []string{context.Id, context.Payload}
-	context.Arguments = getChainCodeArgs2(context)
 
-	//TODO this is hacky and needs to be fixed
-	context.Payload = ""
-
-	handleExpectedSuccess(context)
+	invokePropertyTransaction(context)
 
 }
 
@@ -166,15 +149,10 @@ func TestMultiplePropertyTransactionsWithRepeatOwners(t *testing.T) {
 			{Id: ownership_1, Percent:0.45},
 			{Id: ownership_2, Percent:0.55}}
 
-	//confirmPropertyTransaction(context)
 	context.Payload = createProperty(context)
 	context.ArgumentBuilder = []string{context.Id, context.Payload}
-	context.Arguments = getChainCodeArgs2(context)
 
-	//TODO this is hacky and needs to be fixed
-	context.Payload = ""
-
-	handleExpectedSuccess(context)
+	invokePropertyTransaction(context)
 
 	context = getTestContext(t, stub)
 	context.MethodName = propertyTransaction
@@ -184,15 +162,10 @@ func TestMultiplePropertyTransactionsWithRepeatOwners(t *testing.T) {
 		{Id: ownership_1, Percent:0.35},
 		{Id: ownership_3, Percent:0.65}}
 
-	//confirmPropertyTransaction(context)
 	context.Payload = createProperty(context)
 	context.ArgumentBuilder = []string{context.Id, context.Payload}
-	context.Arguments = getChainCodeArgs2(context)
 
-	//TODO this is hacky and needs to be fixed
-	context.Payload = ""
-
-	handleExpectedSuccess(context)
+	invokePropertyTransaction(context)
 
 }
 
@@ -209,13 +182,11 @@ func TestPropertyTransactionExtraArgs(t *testing.T) {
 		{Id: ownership_3, Percent:0.65}}
 
 	context.Payload = createProperty(context)
-	//context.Arguments = getChainCodeArgs(context.MethodName, context.Id, context.Payload, "extraArgs")
 	context.ArgumentBuilder = []string{context.Payload, context.Id, context.Payload, "extraArgs"}
-	context.Arguments = getChainCodeArgs2(context)
 	context.ExpectedResponse = incorrectNumberOfArgs
+	context.ExpectFailure = true
 
-
-	handleExpectedFailures(context)
+	invokePropertyTransaction(context)
 
 }
 
@@ -228,11 +199,10 @@ func TestPropertyTransactionStringAsSalePrice(t *testing.T) {
 	context.Payload = `{"saleDate":"2017-06-28T21:57:16","salePrice":"1000","owners":[{"id":"ownership_3","percentage":0.45},{"id":"ownerhip_2","percentage":0.55}]}`
 	context.Id = property_1
 	context.ExpectedResponse = cannotUnmarshalStringIntoFloat64
-	//context.Arguments = getChainCodeArgs(context.MethodName, context.Id, context.Payload)
 	context.ArgumentBuilder = []string{context.Id, context.Payload}
-	context.Arguments = getChainCodeArgs2(context)
+	context.ExpectFailure = true
 
-	handleExpectedFailures(context)
+	invokePropertyTransaction(context)
 
 }
 
@@ -245,11 +215,10 @@ func TestPropertyTransactionMissingSaleDate(t *testing.T) {
 	context.Payload = `{"salePrice":1000,"owners":[{"id":"ownership_3","percentage":0.45},{"id":"ownership_2","percentage":0.55}]}`
 	context.Id = property_1
 	context.ExpectedResponse = saleDateRequired
-	//context.Arguments = getChainCodeArgs(context.MethodName, context.Id, context.Payload)
 	context.ArgumentBuilder = []string{context.Id, context.Payload}
-	context.Arguments = getChainCodeArgs2(context)
+	context.ExpectFailure = true
 
-	handleExpectedFailures(context)
+	invokePropertyTransaction(context)
 
 }
 
@@ -262,11 +231,10 @@ func TestPropertyTransactionNegativeSalePrice(t *testing.T) {
 	context.Payload = `{"saleDate":"2017-06-28T21:57:16","salePrice":-1,"owners":[{"id":"ownership_3","percentage":0.45},{"id":"ownerhip_2","percentage":0.55}]}`
 	context.Id = property_1
 	context.ExpectedResponse = salePriceMustBeGreaterThan0
-	//context.Arguments = getChainCodeArgs(context.MethodName, context.Id, context.Payload)
 	context.ArgumentBuilder = []string{context.Id, context.Payload}
-	context.Arguments = getChainCodeArgs2(context)
+	context.ExpectFailure = true
 
-	handleExpectedFailures(context)
+	invokePropertyTransaction(context)
 
 }
 
@@ -279,11 +247,10 @@ func TestPropertyTransactionNoOwners(t *testing.T) {
 	context.Payload = `{"saleDate":"2017-06-28T21:57:16","salePrice":1000,"owners":[]}`
 	context.Id = property_1
 	context.ExpectedResponse = atLeastOneOwnerIsRequired
-	//context.Arguments = getChainCodeArgs(context.MethodName, context.Id, context.Payload)
 	context.ArgumentBuilder = []string{context.Id, context.Payload}
-	context.Arguments = getChainCodeArgs2(context)
+	context.ExpectFailure = true
 
-	handleExpectedFailures(context)
+	invokePropertyTransaction(context)
 
 }
 
@@ -296,11 +263,10 @@ func TestPropertyTransactionTooLowTotalOwnerPercentage(t *testing.T) {
 	context.Payload = `{"saleDate":"2017-06-28T21:57:16","salePrice":1000,"owners":[{"id":"ownership_3","percentage":0.45},{"id":"ownerhip_2","percentage":0.50}]}`
 	context.Id = property_1
 	context.ExpectedResponse = totalPercentageCanNotBeGreaterThan1
-	//context.Arguments = getChainCodeArgs(context.MethodName, context.Id, context.Payload)
 	context.ArgumentBuilder =[]string{context.Id, context.Payload}
-	context.Arguments = getChainCodeArgs2(context)
+	context.ExpectFailure = true
 
-	handleExpectedFailures(context)
+	invokePropertyTransaction(context)
 
 }
 
@@ -315,9 +281,9 @@ func TestPropertyTransactionTooHighTotalOwnerPercentage(t *testing.T) {
 	context.ExpectedResponse = totalPercentageCanNotBeGreaterThan1
 	//context.Arguments = getChainCodeArgs(context.MethodName, context.Id, context.Payload)
 	context.ArgumentBuilder = []string{context.Id, context.Payload}
-	context.Arguments = getChainCodeArgs2(context)
+	context.Arguments = getChainCodeArgs(context)
 
-	handleExpectedFailures(context)
+	confirmExpectedTestFailure(context)
 
 }
 
@@ -337,21 +303,17 @@ func TestGetProperty(t *testing.T) {
 
 	context.Payload = propertyAsString
 	context.ArgumentBuilder = []string{context.Id, context.Payload}
-	context.Arguments = getChainCodeArgs2(context)
 
-	//TODO this is hacky and needs to be fixed
-	context.Payload = ""
-
-	handleExpectedSuccess(context)
+	invokePropertyTransaction(context)
 
 	context = getTestContext(t, stub)
 	context.Id = property_1
 	context.MethodName = getProperty
 	context.Payload = propertyAsString
 	context.ArgumentBuilder = []string{context.Id}
-	context.Arguments = getChainCodeArgs2(context)
+	context.Arguments = getChainCodeArgs(context)
 
-	handleExpectedSuccess(context)
+	confirmExpectedTestSuccess(context)
 
 }
 
@@ -371,14 +333,8 @@ func TestGetPropertyExtraArgs(t *testing.T) {
 
 	context.Payload = propertyAsString
 	context.ArgumentBuilder = []string{context.Id, context.Payload}
-	context.Arguments = getChainCodeArgs2(context)
 
-	//confirmPropertyTransaction(context)
-
-	//TODO this is hacky and needs to be fixed
-	context.Payload = ""
-
-	handleExpectedSuccess(context)
+	invokePropertyTransaction(context)
 
 	context = getTestContext(t, stub)
 	context.Id = property_1
@@ -386,9 +342,9 @@ func TestGetPropertyExtraArgs(t *testing.T) {
 	context.Payload = propertyAsString
 	context.ExpectedResponse = incorrectNumberOfArgs
 	context.ArgumentBuilder = []string{context.Id, context.Payload}
-	context.Arguments = getChainCodeArgs2(context)
+	context.Arguments = getChainCodeArgs(context)
 
-	handleExpectedFailures(context)
+	confirmExpectedTestFailure(context)
 
 }
 
@@ -401,10 +357,9 @@ func TestGetPropertyMissingProperty(t *testing.T) {
 	context.Payload = emptyPropertyJson
 	context.Id = property_1
 	context.ExpectedResponse = incorrectNumberOfArgs
-	//context.Arguments = getChainCodeArgs(context.MethodName, context.Id, context.Payload)
 	context.ArgumentBuilder = []string{context.Id, context.Payload}
-	context.Arguments = getChainCodeArgs2(context)
+	context.Arguments = getChainCodeArgs(context)
 
-	handleExpectedFailures(context)
+	confirmExpectedTestFailure(context)
 
 }
