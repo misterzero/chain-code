@@ -93,26 +93,13 @@ func getChainCodeArgs(chainCodeMethodName string, payload ...string) ([][]byte) 
 
 }
 
-func confirmPropertyTransaction(t *testing.T, stub *shim.MockStub, owners []Attribute) {
-
-	property, propertyString := createProperty(property_1, owners)
-
-	invokePropertyTransaction(t, stub, property.PropertyId, propertyString)
-	invokeGetProperty(t, stub, property.PropertyId, propertyString)
-
-}
-
 //TODO working
 func confirmPropertyTransaction2(t *testing.T, stub *shim.MockStub, context SessionContext) {
 
-	//property, propertyString := createProperty(context.MethodName, context.Attributes)
-	//_, context.Payload = createProperty(context.MethodName, context.Attributes)
 	_, context.Payload = createProperty2(context)
 
-	//invokePropertyTransaction(t, stub, context.Id, context.Payload)
 	invokePropertyTransaction2(t, stub, context)
 
-	//invokeGetProperty(t, stub, context.Id, context.Payload)
 	context.MethodName = getProperty
 	invokeGetProperty2(t, stub, context)
 
@@ -128,19 +115,9 @@ func invokeGetProperty(t *testing.T, stub *shim.MockStub, propertyId, propertySt
 
 func invokeGetProperty2(t *testing.T, stub *shim.MockStub, context SessionContext) {
 
-	//args := getChainCodeArgs(context.MethodName, context.Id)
 	context.Arguments = getChainCodeArgs(context.MethodName, context.Id)
 
-	//handleExpectedSuccess(t, stub, getProperty, args, propertyString)
 	handleExpectedSuccess2(t, stub, context)
-
-}
-
-func invokeGetOwnership(t *testing.T, stub *shim.MockStub, ownershipId string, payload string) {
-
-	args := getChainCodeArgs(getOwnership, ownershipId)
-
-	handleExpectedSuccess(t, stub, getOwnership, args, payload)
 
 }
 
@@ -148,7 +125,6 @@ func invokeGetOwnership2(t *testing.T, stub *shim.MockStub, context SessionConte
 
 	context.Arguments = getChainCodeArgs(context.MethodName, context.Id)
 
-	//handleExpectedSuccess(t, stub, context.MethodName, args, payload)
 	handleExpectedSuccess2(t, stub, context)
 
 }
@@ -162,14 +138,10 @@ func invokePropertyTransaction(t *testing.T, stub *shim.MockStub, propertyId str
 
 func invokePropertyTransaction2(t *testing.T, stub *shim.MockStub, context SessionContext) {
 
-	//args := getChainCodeArgs(propertyTransaction, propertyId, payload)
-	//args := getChainCodeArgs(context.MethodName, context.Id, context.Payload)
 	context.Arguments = getChainCodeArgs(context.MethodName, context.Id, context.Payload)
 
-	//handleExpectedSuccess(t, stub, propertyTransaction, args, "")
 	context.Payload = ""
-	//handleExpectedSuccess(t, stub, context.MethodName, context.Arguments, "")
-	//handleExpectedSuccess(t, stub, context.MethodName, context.Arguments, context.Payload)
+
 	handleExpectedSuccess2(t, stub, context)
 
 }
@@ -191,21 +163,13 @@ func handleExpectedSuccess(t *testing.T, stub *shim.MockStub, argument string, a
 
 func handleExpectedSuccess2(t *testing.T, stub *shim.MockStub, context SessionContext) {
 
-	//response := stub.MockInvoke(argument, args)
-	//response := stub.MockInvoke(context.MethodName, context.Arguments)
 	context.Response = stub.MockInvoke(context.MethodName, context.Arguments)
 
 	context.TestFailureMessage = failureMessageStart + context.MethodName + ", " + context.Payload + "}, "
 
-	//verifyExpectedResponseStatus(t, response, failureMessage, shim.OK)
-	//verifyExpectedResponseStatus(t, context.Response, failureMessage, shim.OK)
-	//verifyExpectedResponseStatus(t, context.Response, context.TestFailureMessage, shim.OK)
 	context.ExpectedStatus = shim.OK
 	verifyExpectedResponseStatus2(t, context)
 
-	//verifyNotExpectedPayload(t, response, failureMessage, context.Payload)
-	//verifyNotExpectedPayload(t, context.Response, failureMessage, context.Payload)
-	//verifyNotExpectedPayload(t, context.Response, context.TestFailureMessage, context.Payload)
 	verifyNotExpectedPayload2(t, context)
 
 }

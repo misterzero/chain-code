@@ -52,24 +52,6 @@ func TestGetOwnershipExtraArgs(t *testing.T) {
 
 }
 
-//func TestOwnershipCreatedDuringPropertyTransaction(t *testing.T) {
-//
-//	stub := getStub()
-//
-//	owners := []Attribute{
-//		{Id: ownership_1, Percent:0.45},
-//		{Id: ownership_2, Percent:0.55}}
-//
-//	confirmPropertyTransaction(t, stub, owners)
-//
-//	property := []Attribute{{Id:"1", Percent:0.45, SaleDate:dateString}}
-//	ownershipPropertyAsString := getAttributesAsString(property)
-//
-//	invokeGetOwnership(t, stub, ownership_1, ownershipPropertyAsString)
-//
-//}
-
-//TODO ========================================================================================================================================================================
 func TestOwnershipCreatedDuringPropertyTransaction2(t *testing.T) {
 
 	stub := getStub()
@@ -82,24 +64,15 @@ func TestOwnershipCreatedDuringPropertyTransaction2(t *testing.T) {
 		{Id: ownership_1, Percent:0.45},
 		{Id: ownership_2, Percent:0.55}}
 
-	//confirmPropertyTransaction(t,stub, context.Attributes)
 	confirmPropertyTransaction2(t,stub, context)
-
-	//property := []Attribute{{Id:"1", Percent:0.45, SaleDate:dateString}}
-	//ownershipPropertyAsString := getAttributesAsString(property)
-	//
-	//invokeGetOwnership(t, stub, ownership_1, ownershipPropertyAsString)
 
 	context = SessionContext{}
 	context.MethodName = getOwnership
 	context.Id = ownership_1
 
 	property := []Attribute{{Id:"1", Percent:0.45, SaleDate:dateString}}
-	//ownershipPropertyAsString := getAttributesAsString(property)
 	context.Payload = getAttributesAsString(property)
 
-
-	//invokeGetOwnership(t, stub, ownership_1, ownershipPropertyAsString)
 	invokeGetOwnership2(t, stub, context)
 
 }
@@ -116,23 +89,8 @@ func TestPropertyTransaction(t *testing.T) {
 		{Id: ownership_1, Percent:0.45},
 		{Id: ownership_2, Percent:0.55}}
 
-	//context.Payload = ""
-
-	//confirmPropertyTransaction(t, stub, owners)
 	confirmPropertyTransaction2(t, stub, context)
 }
-
-//func TestPropertyTransaction(t *testing.T) {
-//
-//	stub := getStub()
-//
-//	owners := []Attribute{
-//		{Id: ownership_1, Percent:0.45},
-//		{Id: ownership_2, Percent:0.55}}
-//
-//	confirmPropertyTransaction(t, stub, owners)
-//
-//}
 
 func TestMultiplePropertyTransactions(t *testing.T) {
 
@@ -142,51 +100,23 @@ func TestMultiplePropertyTransactions(t *testing.T) {
 	context.MethodName = propertyTransaction
 	context.Id = property_1
 
-	//owners := []Attribute{
-	//	{Id: ownership_1, Percent:0.45},
-	//	{Id: ownership_2, Percent:0.55}}
-
 	context.Attributes = []Attribute{
 		{Id: ownership_1, Percent:0.45},
 		{Id: ownership_2, Percent:0.55}}
 
-	//confirmPropertyTransaction(t, stub, owners)
 	confirmPropertyTransaction2(t, stub, context)
 
 	context = SessionContext{}
 	context.MethodName = propertyTransaction
 	context.Id = property_1
 
-	//owners = []Attribute{
-	//	{Id: ownership_3, Percent:0.35},
-	//	{Id: ownership_4, Percent:0.65}}
-
 	context.Attributes = []Attribute{
 		{Id: ownership_3, Percent:0.35},
 		{Id: ownership_4, Percent:0.65}}
 
-	//confirmPropertyTransaction(t, stub, owners)
 	confirmPropertyTransaction2(t, stub, context)
 
 }
-
-//func TestMultiplePropertyTransactions(t *testing.T) {
-//
-//	stub := getStub()
-//
-//	owners := []Attribute{
-//		{Id: ownership_1, Percent:0.45},
-//		{Id: ownership_2, Percent:0.55}}
-//
-//	confirmPropertyTransaction(t, stub, owners)
-//
-//	owners = []Attribute{
-//		{Id: ownership_3, Percent:0.35},
-//		{Id: ownership_4, Percent:0.65}}
-//
-//	confirmPropertyTransaction(t, stub, owners)
-//
-//}
 
 func TestMultiplePropertyTransactionsWithRepeatOwners(t *testing.T) {
 
@@ -223,24 +153,6 @@ func TestMultiplePropertyTransactionsWithRepeatOwners(t *testing.T) {
 	confirmPropertyTransaction2(t, stub, context)
 
 }
-
-//func TestMultiplePropertyTransactionsWithRepeatOwners(t *testing.T) {
-//
-//	stub := getStub()
-//
-//	owners := []Attribute{
-//		{Id: ownership_1, Percent:0.45},
-//		{Id: ownership_2, Percent:0.55}}
-//
-//	confirmPropertyTransaction(t, stub, owners)
-//
-//	owners = []Attribute{
-//		{Id: ownership_1, Percent:0.35},
-//		{Id: ownership_3, Percent:0.65}}
-//
-//	confirmPropertyTransaction(t, stub, owners)
-//
-//}
 
 func TestPropertyTransactionExtraArgs(t *testing.T) {
 
