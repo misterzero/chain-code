@@ -24,7 +24,7 @@ func TestGetOwnershipMissingOwnership(t *testing.T) {
 
 	stub := getStub()
 
-	context := getTestContext(t, stub)
+	context := getSessionContext(t, stub)
 	context.Arguments.MethodName = getOwnership
 	context.Arguments.Payload = ownership_1
 	context.Arguments.Builder = []string{context.Arguments.Payload}
@@ -40,7 +40,7 @@ func TestGetOwnershipExtraArgs(t *testing.T) {
 
 	stub := getStub()
 
-	context := getTestContext(t, stub)
+	context := getSessionContext(t, stub)
 	context.Arguments.MethodName = getOwnership
 	context.Arguments.Payload = invalidArgument
 	context.Arguments.Id = ownership_1
@@ -57,7 +57,7 @@ func TestOwnershipCreatedDuringPropertyTransaction(t *testing.T) {
 
 	stub := getStub()
 
-	context := getTestContext(t, stub)
+	context := getSessionContext(t, stub)
 	context.Arguments.MethodName = propertyTransaction
 	context.Arguments.Id = property_1
 
@@ -70,7 +70,7 @@ func TestOwnershipCreatedDuringPropertyTransaction(t *testing.T) {
 
 	invokePropertyTransaction(context)
 
-	context = getTestContext(t, stub)
+	context = getSessionContext(t, stub)
 	context.Arguments.Id = ownership_1
 	context.Arguments.MethodName = getOwnership
 
@@ -88,7 +88,7 @@ func TestPropertyTransaction(t *testing.T) {
 
 	stub := getStub()
 
-	context := getTestContext(t, stub)
+	context := getSessionContext(t, stub)
 	context.Arguments.MethodName = propertyTransaction
 	context.Arguments.Id = property_1
 
@@ -103,11 +103,11 @@ func TestPropertyTransaction(t *testing.T) {
 
 }
 
-func TestMultiplePropertyTransactions(t *testing.T) {
+func TestMultiplePropertyTransactionsDifferentOwners(t *testing.T) {
 
 	stub := getStub()
 
-	context := getTestContext(t, stub)
+	context := getSessionContext(t, stub)
 	context.Arguments.MethodName = propertyTransaction
 	context.Arguments.Id = property_1
 
@@ -120,7 +120,7 @@ func TestMultiplePropertyTransactions(t *testing.T) {
 
 	invokePropertyTransaction(context)
 
-	context = getTestContext(t, stub)
+	context = getSessionContext(t, stub)
 	context.Arguments.MethodName = propertyTransaction
 	context.Arguments.Id = property_1
 
@@ -138,7 +138,7 @@ func TestMultiplePropertyTransactionsWithRepeatOwners(t *testing.T) {
 
 	stub := getStub()
 
-	context := getTestContext(t, stub)
+	context := getSessionContext(t, stub)
 	context.Arguments.MethodName = propertyTransaction
 	context.Arguments.Id = property_1
 
@@ -151,7 +151,7 @@ func TestMultiplePropertyTransactionsWithRepeatOwners(t *testing.T) {
 
 	invokePropertyTransaction(context)
 
-	context = getTestContext(t, stub)
+	context = getSessionContext(t, stub)
 	context.Arguments.MethodName = propertyTransaction
 	context.Arguments.Id = property_1
 
@@ -170,7 +170,7 @@ func TestPropertyTransactionExtraArgs(t *testing.T) {
 
 	stub := getStub()
 
-	context := getTestContext(t, stub)
+	context := getSessionContext(t, stub)
 	context.Arguments.MethodName = getOwnership
 	context.Arguments.Id = property_1
 
@@ -190,7 +190,7 @@ func TestPropertyTransactionStringAsSalePrice(t *testing.T) {
 
 	stub := getStub()
 
-	context := getTestContext(t, stub)
+	context := getSessionContext(t, stub)
 	context.Arguments.MethodName = propertyTransaction
 	context.Arguments.Payload = `{"saleDate":"2017-06-28T21:57:16","salePrice":"1000","owners":[{"id":"ownership_3","percentage":0.45},{"id":"ownerhip_2","percentage":0.55}]}`
 	context.Arguments.Id = property_1
@@ -205,7 +205,7 @@ func TestPropertyTransactionMissingSaleDate(t *testing.T) {
 
 	stub := getStub()
 
-	context := getTestContext(t, stub)
+	context := getSessionContext(t, stub)
 	context.Arguments.MethodName = propertyTransaction
 	context.Arguments.Payload = `{"salePrice":1000,"owners":[{"id":"ownership_3","percentage":0.45},{"id":"ownership_2","percentage":0.55}]}`
 	context.Arguments.Id = property_1
@@ -221,7 +221,7 @@ func TestPropertyTransactionNegativeSalePrice(t *testing.T) {
 
 	stub := getStub()
 
-	context := getTestContext(t, stub)
+	context := getSessionContext(t, stub)
 	context.Arguments.MethodName = propertyTransaction
 	context.Arguments.Payload = `{"saleDate":"2017-06-28T21:57:16","salePrice":-1,"owners":[{"id":"ownership_3","percentage":0.45},{"id":"ownerhip_2","percentage":0.55}]}`
 	context.Arguments.Id = property_1
@@ -236,7 +236,7 @@ func TestPropertyTransactionNoOwners(t *testing.T) {
 
 	stub := getStub()
 
-	context := getTestContext(t, stub)
+	context := getSessionContext(t, stub)
 	context.Arguments.MethodName = propertyTransaction
 	context.Arguments.Payload = `{"saleDate":"2017-06-28T21:57:16","salePrice":1000,"owners":[]}`
 	context.Arguments.Id = property_1
@@ -251,7 +251,7 @@ func TestPropertyTransactionTooLowTotalOwnerPercentage(t *testing.T) {
 
 	stub := getStub()
 
-	context := getTestContext(t, stub)
+	context := getSessionContext(t, stub)
 	context.Arguments.MethodName = propertyTransaction
 	context.Arguments.Payload = `{"saleDate":"2017-06-28T21:57:16","salePrice":1000,"owners":[{"id":"ownership_3","percentage":0.45},{"id":"ownerhip_2","percentage":0.50}]}`
 	context.Arguments.Id = property_1
@@ -267,7 +267,7 @@ func TestPropertyTransactionTooHighTotalOwnerPercentage(t *testing.T) {
 
 	stub := getStub()
 
-	context := getTestContext(t, stub)
+	context := getSessionContext(t, stub)
 	context.Arguments.MethodName = propertyTransaction
 	context.Arguments.Payload = `{"saleDate":"2017-06-28T21:57:16","salePrice":1000,"owners":[{"id":"ownership_3","percentage":0.45},{"id":"ownerhip_2","percentage":0.70}]}`
 	context.Arguments.Id = property_1
@@ -284,7 +284,7 @@ func TestGetProperty(t *testing.T) {
 
 	stub := getStub()
 
-	context := getTestContext(t, stub)
+	context := getSessionContext(t, stub)
 	context.Arguments.MethodName = propertyTransaction
 	context.Arguments.Id = property_1
 
@@ -299,7 +299,7 @@ func TestGetProperty(t *testing.T) {
 
 	invokePropertyTransaction(context)
 
-	context = getTestContext(t, stub)
+	context = getSessionContext(t, stub)
 	context.Arguments.Id = property_1
 	context.Arguments.MethodName = getProperty
 	context.Arguments.Payload = propertyAsString
@@ -315,7 +315,7 @@ func TestGetPropertyExtraArgs(t *testing.T) {
 
 	stub := getStub()
 
-	context := getTestContext(t, stub)
+	context := getSessionContext(t, stub)
 	context.Arguments.Id = property_1
 	context.Arguments.MethodName = getProperty
 	context.Arguments.Payload = createProperty(context)
@@ -332,7 +332,7 @@ func TestGetPropertyMissingProperty(t *testing.T) {
 
 	stub := getStub()
 
-	context := getTestContext(t, stub)
+	context := getSessionContext(t, stub)
 	context.Arguments.MethodName = getProperty
 	context.Arguments.Payload = emptyPropertyJson
 	context.Arguments.Id = property_1
