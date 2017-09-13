@@ -103,31 +103,26 @@ func invokeGetProperty(context SessionContext) {
 func invoke(context SessionContext){
 
 	context.Arguments.ChainCodeArgs = getChainCodeArgs(context)
+	context.Test.Response = context.Test.Stub.MockInvoke(context.Arguments.MethodName, context.Arguments.ChainCodeArgs)
+	context.Test.TestFailureMessage = failureMessageStart + context.Arguments.MethodName + ", " + context.Arguments.Payload + "}, "
+
+	handleExpectedResult(context)
+
+}
+
+func handleExpectedResult(context SessionContext) {
 
 	if context.Test.ShouldFailTest {
-		confirmExpectedTestFailure(context)
+		context.Test.ExpectedStatus = shim.ERROR
 	}else {
-		confirmExpectedTestSuccess(context)
+		context.Test.ExpectedStatus = shim.OK
 	}
 
-}
-
-func confirmExpectedTestSuccess(context SessionContext) {
-
-	context.Test.Response = context.Test.Stub.MockInvoke(context.Arguments.MethodName, context.Arguments.ChainCodeArgs)
-	context.Test.TestFailureMessage = failureMessageStart + context.Arguments.MethodName + ", " + context.Arguments.Payload + "}, "
-	context.Test.ExpectedStatus = shim.OK
-
-	verifyExpectedResponseStatus(context)
-	verifyExpectedPayload(context)
+	confirmExpectedTestResult(context)
 
 }
 
-func confirmExpectedTestFailure(context SessionContext) {
-
-	context.Test.Response = context.Test.Stub.MockInvoke(context.Arguments.MethodName, context.Arguments.ChainCodeArgs)
-	context.Test.TestFailureMessage = failureMessageStart + context.Arguments.MethodName + ", " + context.Arguments.Payload + "}, "
-	context.Test.ExpectedStatus = shim.ERROR
+func confirmExpectedTestResult(context SessionContext) {
 
 	verifyExpectedResponseStatus(context)
 	verifyExpectedResponseMessage(context)
@@ -157,7 +152,7 @@ func verifyExpectedResponseMessage(context SessionContext) {
 
 func verifyExpectedResponseMessageSet(context SessionContext) {
 
-	if len(context.Test.ExpectedResponseMessage) == 0 {
+	if len(context.Test.ExpectedResponseMessage) == 0 && context.Test.ExpectedStatus == shim.ERROR{
 		context.Test.TestFailureMessage = "ExpectedResponseMessage is empty in Context"
 		displayTestFailure(context)
 	}
@@ -174,6 +169,7 @@ func verifyExpectedPayload(context SessionContext) {
 }
 
 func displayTestFailure(context SessionContext) {
+
 	fmt.Println(context.Test.TestFailureMessage)
 	context.Test.t.FailNow()
 
