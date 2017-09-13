@@ -12,6 +12,31 @@ import (
 	"fmt"
 )
 
+type SessionContext struct {
+	Test      					TestContext
+	Arguments 					ArgumentContext
+}
+
+type TestContext struct {
+	t                       	*testing.T
+	Stub                    	*shim.MockStub
+	TestFailureMessage      	string
+	ExpectedStatus          	int32
+	ExpectedResponseMessage 	string
+	ExpectedResponsePayload 	string
+	ShouldFailTest          	bool
+	Response                	peer.Response
+}
+
+type ArgumentContext struct{
+	MethodName    				string
+	Payload       				string
+	ChainCodeArgs 				[][]byte
+	Builder       				[]string
+	Id            				string
+	Attributes    				[]Attribute
+}
+
 const getOwnership = "getOwnership"
 const propertyTransaction = "propertyTransaction"
 const getProperty = "getProperty"
@@ -37,31 +62,6 @@ const failureMessageStart = "| FAIL [{args}, {<response-failure>}] | [{"
 const responseMessageStart = "{response.Message="
 const responseStatusStart = "{response.Status="
 const responsePayloadStart = "{response.Payload="
-
-type SessionContext struct {
-	Test      					TestContext
-	Arguments 					ArgumentContext
-}
-
-type TestContext struct {
-	t                       	*testing.T
-	Stub                    	*shim.MockStub
-	TestFailureMessage      	string
-	ExpectedStatus          	int32
-	ExpectedResponseMessage 	string
-	ExpectedResponsePayload 	string
-	ShouldFailTest          	bool
-	Response                	peer.Response
-}
-
-type ArgumentContext struct{
-	MethodName    				string
-	Payload       				string
-	ChainCodeArgs 				[][]byte
-	Builder       				[]string
-	Id            				string
-	Attributes    				[]Attribute
-}
 
 func createProperty(context SessionContext) (string) {
 
@@ -184,7 +184,7 @@ func getStub() (*shim.MockStub) {
 
 }
 
-func getTestContext(t *testing.T, stub *shim.MockStub) (SessionContext){
+func getSessionContext(t *testing.T, stub *shim.MockStub) (SessionContext){
 
 	context := SessionContext{}
 	context.Test.Stub = stub
