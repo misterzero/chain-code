@@ -68,8 +68,6 @@ func TestOwnershipCreatedDuringPropertyTransaction(t *testing.T) {
 	context.Arguments.Payload = createProperty(context)
 	context.Arguments.Builder = []string{context.Arguments.Id, context.Arguments.Payload}
 
-	context.Test.ExpectedResponsePayload = ""
-
 	invokePropertyTransaction(context)
 
 	context = getTestContext(t, stub)
@@ -101,8 +99,6 @@ func TestPropertyTransaction(t *testing.T) {
 	context.Arguments.Payload = createProperty(context)
 	context.Arguments.Builder = []string{context.Arguments.Id, context.Arguments.Payload}
 
-	context.Test.ExpectedResponsePayload = ""
-
 	invokePropertyTransaction(context)
 
 }
@@ -122,8 +118,6 @@ func TestMultiplePropertyTransactions(t *testing.T) {
 	context.Arguments.Payload = createProperty(context)
 	context.Arguments.Builder = []string{context.Arguments.Id, context.Arguments.Payload}
 
-	context.Test.ExpectedResponsePayload = ""
-
 	invokePropertyTransaction(context)
 
 	context = getTestContext(t, stub)
@@ -136,8 +130,6 @@ func TestMultiplePropertyTransactions(t *testing.T) {
 
 	context.Arguments.Payload = createProperty(context)
 	context.Arguments.Builder = []string{context.Arguments.Id, context.Arguments.Payload}
-
-	context.Test.ExpectedResponsePayload = ""
 
 	invokePropertyTransaction(context)
 }
@@ -157,8 +149,6 @@ func TestMultiplePropertyTransactionsWithRepeatOwners(t *testing.T) {
 	context.Arguments.Payload = createProperty(context)
 	context.Arguments.Builder = []string{context.Arguments.Id, context.Arguments.Payload}
 
-	context.Test.ExpectedResponsePayload = ""
-
 	invokePropertyTransaction(context)
 
 	context = getTestContext(t, stub)
@@ -171,8 +161,6 @@ func TestMultiplePropertyTransactionsWithRepeatOwners(t *testing.T) {
 
 	context.Arguments.Payload = createProperty(context)
 	context.Arguments.Builder = []string{context.Arguments.Id, context.Arguments.Payload}
-
-	context.Test.ExpectedResponsePayload = ""
 
 	invokePropertyTransaction(context)
 
@@ -195,8 +183,6 @@ func TestPropertyTransactionExtraArgs(t *testing.T) {
 	context.Test.ExpectedResponseMessage = incorrectNumberOfArgs
 	context.Test.ShouldFailTest = true
 
-	context.Test.ExpectedResponsePayload = ""
-
 	invokePropertyTransaction(context)
 }
 
@@ -212,8 +198,6 @@ func TestPropertyTransactionStringAsSalePrice(t *testing.T) {
 	context.Arguments.Builder = []string{context.Arguments.Id, context.Arguments.Payload}
 	context.Test.ShouldFailTest = true
 
-	context.Test.ExpectedResponsePayload = ""
-
 	invokePropertyTransaction(context)
 }
 
@@ -228,8 +212,6 @@ func TestPropertyTransactionMissingSaleDate(t *testing.T) {
 	context.Test.ExpectedResponseMessage = saleDateRequired
 	context.Arguments.Builder = []string{context.Arguments.Id, context.Arguments.Payload}
 	context.Test.ShouldFailTest = true
-
-	context.Test.ExpectedResponsePayload = ""
 
 	invokePropertyTransaction(context)
 
@@ -247,8 +229,6 @@ func TestPropertyTransactionNegativeSalePrice(t *testing.T) {
 	context.Arguments.Builder = []string{context.Arguments.Id, context.Arguments.Payload}
 	context.Test.ShouldFailTest = true
 
-	context.Test.ExpectedResponsePayload = ""
-
 	invokePropertyTransaction(context)
 }
 
@@ -264,8 +244,6 @@ func TestPropertyTransactionNoOwners(t *testing.T) {
 	context.Arguments.Builder = []string{context.Arguments.Id, context.Arguments.Payload}
 	context.Test.ShouldFailTest = true
 
-	context.Test.ExpectedResponsePayload = ""
-
 	invokePropertyTransaction(context)
 }
 
@@ -280,8 +258,6 @@ func TestPropertyTransactionTooLowTotalOwnerPercentage(t *testing.T) {
 	context.Test.ExpectedResponseMessage = totalPercentageCanNotBeGreaterThan1
 	context.Arguments.Builder =[]string{context.Arguments.Id, context.Arguments.Payload}
 	context.Test.ShouldFailTest = true
-
-	context.Test.ExpectedResponsePayload = ""
 
 	invokePropertyTransaction(context)
 
@@ -299,8 +275,6 @@ func TestPropertyTransactionTooHighTotalOwnerPercentage(t *testing.T) {
 
 	context.Test.ExpectedResponseMessage = totalPercentageCanNotBeGreaterThan1
 	context.Test.ShouldFailTest =true
-
-	context.Test.ExpectedResponsePayload = ""
 
 	invokePropertyTransaction(context)
 
@@ -322,8 +296,6 @@ func TestGetProperty(t *testing.T) {
 
 	context.Arguments.Payload = propertyAsString
 	context.Arguments.Builder = []string{context.Arguments.Id, context.Arguments.Payload}
-
-	context.Test.ExpectedResponsePayload = ""
 
 	invokePropertyTransaction(context)
 
