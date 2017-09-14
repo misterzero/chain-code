@@ -123,16 +123,15 @@ func (t *Chaincode) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
 	}
 
 	if args[0] == "getOwnership" {
-		//return t.getOwnership(stub, args)
 		return t.getOwnership(contractContext)
 	} else if args[0] == "getOwnershipHistory" {
-		return t.getOwnershipHistory(stub, args)
+		return t.getOwnershipHistory(contractContext)
 	} else if  args[0] == "propertyTransaction" {
-		return t.propertyTransaction(stub, args)
+		return t.propertyTransaction(contractContext)
 	} else if args[0] == "getProperty" {
-		return t.getProperty(stub, args)
+		return t.getProperty(contractContext)
 	}else if args[0] == "getPropertyHistory" {
-		return t.getPropertyHistory(stub, args)
+		return t.getPropertyHistory(contractContext)
 	}
 
 	errorMessage = "Invalid method:  " + args[0]
@@ -158,14 +157,14 @@ func (t *Chaincode) getOwnership(contractContext ContractContext) pb.Response{
 
 }
 
-func (t *Chaincode) getOwnershipHistory(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+func (t *Chaincode) getOwnershipHistory(contractContext ContractContext) pb.Response {
 
-	if len(args) != 2 {
-		return shim.Error("(getOwnershipHistory) Incorrect number of arguments: " + strconv.Itoa(len(args)) + ". Expecting 2")
+	if len(contractContext.Arguments) != 2 {
+		return shim.Error("(getOwnershipHistory) Incorrect number of arguments: " + strconv.Itoa(len(contractContext.Arguments)) + ". Expecting 2")
 	}
 
-	id := args[1]
-	resultsIterator, err := stub.GetHistoryForKey(id)
+	id := contractContext.Arguments[1]
+	resultsIterator, err := contractContext.Stub.GetHistoryForKey(id)
 	if err != nil {
 		err = errors.New("Unable to get history for key: " + id + " | "+ err.Error())
 		return shim.Error(err.Error())
@@ -219,7 +218,7 @@ func (t *Chaincode) getOwnershipHistory(stub shim.ChaincodeStubInterface, args [
 				buffer.WriteString(percent)
 				buffer.WriteString(",\"saleDate\":\"")
 
-				propertyAsBytes, err := getPropertyFromLedger(stub, "property_" + ownershipProperties[i].Id)
+				propertyAsBytes, err := getPropertyFromLedger(contractContext.Stub, "property_" + ownershipProperties[i].Id)
 
 				property := Property{}
 				json.Unmarshal(propertyAsBytes, &property)
@@ -252,21 +251,21 @@ func (t *Chaincode) getOwnershipHistory(stub shim.ChaincodeStubInterface, args [
 
 }
 
-func (t *Chaincode) propertyTransaction(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+func (t *Chaincode) propertyTransaction(contractContext ContractContext) pb.Response {
 
 	var propertyId string
 	var propertyString string
 	var err error
 
-	if len(args) != 3 {
-		return shim.Error("(propertyTransaction) Incorrect number of arguments: " + strconv.Itoa(len(args)) + ". Expecting 3")
+	if len(contractContext.Arguments) != 3 {
+		return shim.Error("(propertyTransaction) Incorrect number of arguments: " + strconv.Itoa(len(contractContext.Arguments)) + ". Expecting 3")
 	}
 
-	propertyId = args[1]
-	propertyString = args[2]
+	propertyId = contractContext.Arguments[1]
+	propertyString = contractContext.Arguments[2]
 
 	property := Property{}
-	property.TxId = stub.GetTxID()
+	property.TxId = contractContext.Stub.GetTxID()
 	err = json.Unmarshal([]byte(propertyString), &property)
 	if err != nil {
 		return shim.Error(err.Error())
@@ -282,17 +281,17 @@ func (t *Chaincode) propertyTransaction(stub shim.ChaincodeStubInterface, args [
 		return shim.Error(err.Error())
 	}
 
-	propertyBytes, err := stub.GetState(propertyId)
+	propertyBytes, err := contractContext.Stub.GetState(propertyId)
 	if err != nil {
 		return shim.Error(err.Error())
 	}
 
-	err = updatePropertyOwnership(stub, property, propertyBytes, propertyId)
+	err = updatePropertyOwnership(contractContext.Stub, property, propertyBytes, propertyId)
 	if err != nil {
 		return shim.Error(err.Error())
 	}
 
-	err = addPropertyToLedger(stub, property, propertyId)
+	err = addPropertyToLedger(contractContext.Stub, property, propertyId)
 	if err != nil {
 		return shim.Error(err.Error())
 	}
@@ -301,18 +300,18 @@ func (t *Chaincode) propertyTransaction(stub shim.ChaincodeStubInterface, args [
 
 }
 
-func (t *Chaincode) getProperty(stub shim.ChaincodeStubInterface, args []string) pb.Response{
+func (t *Chaincode) getProperty(contractContext ContractContext) pb.Response{
 
 	var propertyId string
 	var err error
 
-	if len(args) != 2 {
-		return shim.Error("(getProperty) Incorrect number of arguments: " + strconv.Itoa(len(args)) + ". Expecting 2")
+	if len(contractContext.Arguments) != 2 {
+		return shim.Error("(getProperty) Incorrect number of arguments: " + strconv.Itoa(len(contractContext.Arguments)) + ". Expecting 2")
 	}
 
-	propertyId = args[1]
+	propertyId = contractContext.Arguments[1]
 
-	propertyBytes, err := getPropertyFromLedger(stub, propertyId)
+	propertyBytes, err := getPropertyFromLedger(contractContext.Stub, propertyId)
 	if err != nil {
 		return shim.Error(err.Error())
 	}
@@ -324,14 +323,14 @@ func (t *Chaincode) getProperty(stub shim.ChaincodeStubInterface, args []string)
 
 }
 
-func (t *Chaincode) getPropertyHistory(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+func (t *Chaincode) getPropertyHistory(contractContext ContractContext) pb.Response {
 
-	if len(args) != 2 {
-		return shim.Error("(getPropertyHistory) Incorrect number of arguments: " + strconv.Itoa(len(args))  + ". Expecting 2")
+	if len(contractContext.Arguments) != 2 {
+		return shim.Error("(getPropertyHistory) Incorrect number of arguments: " + strconv.Itoa(len(contractContext.Arguments))  + ". Expecting 2")
 	}
 
-	id := args[1]
-	resultsIterator, err := stub.GetHistoryForKey(id)
+	id := contractContext.Arguments[1]
+	resultsIterator, err := contractContext.Stub.GetHistoryForKey(id)
 	if err != nil {
 		err = errors.New("Unable to get history for key: " + id + " | "+ err.Error())
 		return shim.Error(err.Error())
